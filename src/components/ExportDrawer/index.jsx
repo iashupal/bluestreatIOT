@@ -79,7 +79,6 @@ const tankTable = gql`
     }
   }
 `;
-var csvData = "";
 class ExportDrawer extends Component {
   constructor(props) {
     super(props);
@@ -92,27 +91,67 @@ class ExportDrawer extends Component {
       tanksDataId: this.props.tanksDataId,
       pageSize: 10,
       currentPage: 1,
+      checkBoxes: {
+        "Tank Number": false,
+        "Tank Name": false,
+        "Tank Status": false,
+        "Sensor Status": false,
+        Alerts: false,
+        Commodity: false,
+        "Current Volume": false,
+        "Refill Potential": false,
+        "Tank Capacity": false,
+        Temperature: false,
+        Battery: false,
+      },
     };
     this.setCSV = this.setCSV.bind(this);
   }
-  onChange = (e) => {
-    // this.setState({
-    //   checked: e.target.checked,
-    // });
-    // if (e.target.checked === true) {
-    //   data.push(CsvData);
-    //   console.log(CsvData);
-    // }
-    console.log(`checked = ${e.target.checked}`);
+  onChange = ({ target: { value } }) => {
+    const { checkBoxes } = this.state;
+    this.setState(
+      { checkBoxes: { ...checkBoxes, [value]: !checkBoxes[value] } },
+      () => this.setCSV()
+    );
   };
-  setCSV(data) {
-    console.log(1);
+  changeAll = ({ target: { checked } }) => {
+    const { checkBoxes } = this.state;
+    const updates = {};
+    Object.keys(checkBoxes).forEach(
+      (checkBox) => (updates[checkBox] = checked)
+    );
+    this.setState({ checkBoxes: { ...updates } }, () => this.setCSV());
+  };
+  clearCheckBoxes = () => {
+    const { checkBoxes } = this.state;
+    const updates = {};
+    Object.keys(checkBoxes).forEach((checkBox) => (updates[checkBox] = false));
+    this.setState({ checkBoxes: { ...updates } });
+  };
+  setCSV() {
+    console.log("setCSV");
+    const { checkBoxes } = this.state;
+    const { selectedCheckboxKeys, tankData } = this.props;
     let entryHistory = [];
-    data.map((item) => {
-      entryHistory.push({
-        TankNumber: item.node.externalId ? item.node.externalId : "",
-        TankName: item.node.description ? item.node.description : "",
-        TankStatus: item.node.latestReading
+    const filteredData = selectedCheckboxKeys.length
+      ? tankData.edges.filter(({ node: { id } }) =>
+          selectedCheckboxKeys.includes(id)
+        )
+      : tankData.edges || [];
+    for (const item of filteredData) {
+      const alarmValues = { high: 0, medium: 0 };
+      item.node.alarms
+        .filter(({ alarming }) => alarming)
+        .forEach(({ priority }) => {
+          priority >= 500 && priority <= 999
+            ? alarmValues.medium++
+            : alarmValues.high++;
+        });
+
+      const fullData = {
+        "Tank Number": item.node.externalId ? item.node.externalId : "",
+        "Tank Name": item.node.description ? item.node.description : "",
+        "Tank Status": item.node.latestReading
           ? item.node.latestReading.levelPercent != null
             ? item.node.latestReading.levelPercent *
               100 *
@@ -121,8 +160,12 @@ class ExportDrawer extends Component {
                 : 0)
             : 0
           : 0,
+        "Sensor Status":
+          item.node.alarms.alarmType === "sensorMissedReportsAlarm" &&
+          item.node.alarms.alarming === true,
+        Alerts: `High - ${alarmValues.high} & Medium - ${alarmValues.medium}`,
         Commodity: "Propane",
-        currentVolume: item.node.latestReading
+        "Current Volume": item.node.latestReading
           ? item.node.latestReading === null
             ? item.node.latestReading.levelPercent != null
               ? item.node.latestReading.levelPercent *
@@ -133,12 +176,12 @@ class ExportDrawer extends Component {
               : 0
             : "0"
           : "0",
-        RefillPotential: item.node.latestReading
+        "Refill Potential": item.node.latestReading
           ? item.node.latestReading.refillPotentialGallons
             ? item.node.latestReading.refillPotentialGallons
             : "0"
           : "0",
-        TankCapacity: item.node.specifications
+        "Tank Capacity": item.node.specifications
           ? item.node.specifications.capacityGallons
           : "",
         Temperature: item.node.latestReading
@@ -151,304 +194,261 @@ class ExportDrawer extends Component {
             ? item.node.latestReading.batteryVoltage
             : "0"
           : 0,
+      };
+
+      const selectedCheckboxData = {};
+      Object.keys(checkBoxes).forEach((checkbox) => {
+        checkBoxes[checkbox] &&
+          Object.assign(selectedCheckboxData, {
+            [checkbox]: fullData[checkbox],
+          });
       });
-      return 0;
-    });
-    csvData = entryHistory;
-    console.log("entryHistory", csvData);
+      entryHistory.push({ ...selectedCheckboxData });
+    }
+    this.setState({ csvData: [...entryHistory] });
+    console.log("setCSVData - ", this.state.csvData);
   }
+
   render() {
-    const { visible, hideForm, checked } = this.props;
-    const { pageSize } = this.state;
-    console.log("tanksDataid", this.state.tanksDataId);
+    const { visible, hideForm, checked, tankData } = this.props;
+    const { pageSize, checkBoxes } = this.state;
+    console.log("tanksDataid -- ", this.props.tanksDataId);
+    console.log("selectedCheckboxKeys -- ", this.props.selectedCheckboxKeys);
     console.log("selectedRowKeys", this.props.selectedCheckboxKeys);
-    console.log("Csv===", csvData);
+    console.log("tankData - ", tankData);
+
     return (
       <div className="advanced_form">
         <Drawer title="Export" width={620} closable={false} visible={visible}>
-          <Query
-            query={tankTable}
-            variables={{
-              id: this.state.tanksDataId,
-              first: pageSize,
-              after: null,
-              // filter: filtercondition,
-            }}
-          >
-            {({ data, error, loading, fetchMore }) => {
-              //  <>
-              if (loading) {
-                return (
-                  <div>
-                    <Loader />
+          <>
+            <img
+              className="hideSearch_form"
+              src={arrowLeft}
+              alt="close"
+              onClick={() => (hideForm(), this.clearCheckBoxes())}
+            />
+            <div className="advanced_btns">
+              <Button
+                onClick={this.handleSubmit}
+                className="saved_btn"
+                size="large"
+                type="primary"
+              >
+                Current Tanks in View(
+                {tankData.totalCount})
+              </Button>
+              <Button onClick={hideForm} size="large" className="filter_btn">
+                Selected Tanks(
+                {this.props.selectedCheckboxKeys.length || 0})
+              </Button>
+            </div>
+            <SaveCard
+              heading="Tank Date Range to Export"
+              contents={[
+                <div className="saved_searches">
+                  <Checkbox onChange={this.onChange}>
+                    <RangePicker
+                      defaultValue={[
+                        moment("2020/01/01", dateFormat),
+                        moment("2020/01/01", dateFormat),
+                      ]}
+                      format={dateFormat}
+                    />
+                  </Checkbox>
+                </div>,
+              ]}
+            />
+            <SaveCard
+              heading="Tank Data to Export"
+              contents={[
+                <div className="saved_searches">
+                  <div className="export__data--content">
+                    <Checkbox
+                      onChange={this.changeAll}
+                      checked={Object.values(checkBoxes).every(
+                        (value) => value
+                      )}
+                    >
+                      {" "}
+                      Export All Data Points
+                    </Checkbox>
                   </div>
-                );
-              }
-              if (error) {
-                return <div>Error</div>;
-              } else if (data) {
-                csvData = data.locationEntry.tanks.edges;
-                console.log("tankExportDrawer", data);
-                console.log("csvData", csvData);
-                this.setCSV(data.locationEntry.tanks.edges);
-                return (
-                  data &&
-                  data.locationEntry && (
-                    <>
-                      <img
-                        className="hideSearch_form"
-                        src={arrowLeft}
-                        alt="close"
-                        onClick={hideForm}
-                      />
-                      <div className="advanced_btns">
-                        <Button
-                          onClick={this.handleSubmit}
-                          className="saved_btn"
-                          size="large"
-                          type="primary"
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="externalId"
+                          value="Tank Number"
+                          checked={checkBoxes["Tank Number"]}
                         >
-                          Current Tanks in View(
-                          {data.locationEntry.tanks.totalCount})
-                        </Button>
-                        <Button
-                          onClick={hideForm}
-                          size="large"
-                          className="filter_btn"
-                        >
-                          Selected Tanks(
-                          {this.props.selectedCheckboxKeys.length || 0})
-                        </Button>
+                          {" "}
+                          Tank Number
+                        </Checkbox>
                       </div>
-                      <SaveCard
-                        heading="Tank Date Range to Export"
-                        contents={[
-                          <div className="saved_searches">
-                            <Checkbox onChange={this.onChange}>
-                              <RangePicker
-                                defaultValue={[
-                                  moment("2020/01/01", dateFormat),
-                                  moment("2020/01/01", dateFormat),
-                                ]}
-                                format={dateFormat}
-                              />
-                            </Checkbox>
-                          </div>,
-                        ]}
-                      />
-                      <SaveCard
-                        heading="Tank Data to Export"
-                        contents={[
-                          <div className="saved_searches">
-                            <div className="export__data--content">
-                              <Checkbox onChange={this.onChange}>
-                                {" "}
-                                Export All Data Points
-                              </Checkbox>
-                            </div>
-                            <Row gutter={16}>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="externalId"
-                                  >
-                                    {" "}
-                                    Tank Number
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="description"
-                                  >
-                                    {" "}
-                                    Tank Name
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                            </Row>
-                            <Row gutter={16}>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="levelPercent"
-                                  >
-                                    {" "}
-                                    Tank Status
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="sensorStatus"
-                                  >
-                                    {" "}
-                                    Sensor Status
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                            </Row>
-                            <Row gutter={16}>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="alerts"
-                                  >
-                                    {" "}
-                                    Alerts
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="commodity"
-                                  >
-                                    {" "}
-                                    Commodity
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                            </Row>
-                            <Row gutter={16}>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox onChange={this.onChange}>
-                                    {" "}
-                                    Current Volume
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox onChange={this.onChange}>
-                                    {" "}
-                                    Refill Potential
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                            </Row>
-                            <Row gutter={16}>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox onChange={this.onChange}>
-                                    {" "}
-                                    Tank Capacity
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="temperatureCelsius"
-                                  >
-                                    {" "}
-                                    Temperature
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                            </Row>
-                            <Row gutter={16}>
-                              <Col span={12}>
-                                <div className="export__data--content">
-                                  <Checkbox
-                                    onChange={this.onChange}
-                                    name="batteryVoltage"
-                                  >
-                                    {" "}
-                                    Battery
-                                  </Checkbox>
-                                </div>
-                              </Col>
-                            </Row>
-                          </div>,
-                        ]}
-                      />
-                      {/* <SaveCard
-            heading="Tank Data Range to Export"
-            contents={[
-              <div className="saved_searches">
-                <Row gutter={16}>
-                  <Col span={24}>
-                    <div className="export__data--content">
-                      <Checkbox onChange={this.onChange}> CSV</Checkbox>
-                    </div>
-                  </Col>
-                </Row>
-              </div>,
-            ]}
-          /> */}
-                      <div
-                        style={{
-                          padding: "10px 16px",
-                          textAlign: "right",
-                        }}
-                      >
-                        <CSVLink
-                          data={csvData}
-                          filename={`tanksRecord-${moment(
-                            new Date()
-                          ).toISOString()}.csv`}
+                    </Col>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="description"
+                          value="Tank Name"
+                          checked={checkBoxes["Tank Name"]}
                         >
-                          <Button
-                            size="large"
-                            className="client_export--btn"
-                            icon={
-                              <img
-                                className="icons"
-                                src={fileExport}
-                                alt="export"
-                              />
-                            }
-                            type="primary"
-                            // onClick={() => {
-                            //   const {
-                            //     endCursor,
-                            //   } = data.locationEntry.tanks.pageInfo;
-                            //   console.log(endCursor);
-                            //   fetchMore({
-                            //     variables: { after: endCursor },
-                            //     updateQuery: (
-                            //       prevResult,
-                            //       { fetchMoreResult }
-                            //     ) => {
-                            //       console.log("prevResult", prevResult);
-                            //       console.log(
-                            //         "fetchMoreResult",
-                            //         fetchMoreResult
-                            //       );
-                            //       fetchMoreResult.locationEntry.tanks.edges = [
-                            //         ...prevResult.locationEntry.tanks.edges,
-                            //         ...fetchMoreResult.locationEntry.tanks
-                            //           .edges,
-                            //       ];
-                            //       // if (!fetchMoreResult)
-                            //       //   return [...prevResult, ...fetchMoreResult];
-                            //       // return fetchMoreResult;
-                            //       return fetchMoreResult;
-                            //     },
-                            //   });
-                            // }}
-                          >
-                            Export
-                          </Button>
-                        </CSVLink>
+                          {" "}
+                          Tank Name
+                        </Checkbox>
                       </div>
-                    </>
-                  )
-                );
-              }
-            }}
-          </Query>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="levelPercent"
+                          value="Tank Status"
+                          checked={checkBoxes["Tank Status"]}
+                        >
+                          {" "}
+                          Tank Status
+                        </Checkbox>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="sensorStatus"
+                          value="Sensor Status"
+                          checked={checkBoxes["Sensor Status"]}
+                        >
+                          {" "}
+                          Sensor Status
+                        </Checkbox>
+                      </div>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="alerts"
+                          value="Alerts"
+                          checked={checkBoxes["Alerts"]}
+                        >
+                          {" "}
+                          Alerts
+                        </Checkbox>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="commodity"
+                          value="Commodity"
+                          checked={checkBoxes["Commodity"]}
+                        >
+                          {" "}
+                          Commodity
+                        </Checkbox>
+                      </div>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          value="Current Volume"
+                          checked={checkBoxes["Current Volume"]}
+                        >
+                          {" "}
+                          Current Volume
+                        </Checkbox>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          value="Refill Potential"
+                          checked={checkBoxes["Refill Potential"]}
+                        >
+                          {" "}
+                          Refill Potential
+                        </Checkbox>
+                      </div>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          value="Tank Capacity"
+                          checked={checkBoxes["Tank Capacity"]}
+                        >
+                          {" "}
+                          Tank Capacity
+                        </Checkbox>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="temperatureCelsius"
+                          value="Temperature"
+                          checked={checkBoxes["Temperature"]}
+                        >
+                          {" "}
+                          Temperature
+                        </Checkbox>
+                      </div>
+                    </Col>
+                  </Row>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div className="export__data--content">
+                        <Checkbox
+                          onChange={this.onChange}
+                          name="batteryVoltage"
+                          value="Battery"
+                          checked={checkBoxes["Battery"]}
+                        >
+                          {" "}
+                          Battery
+                        </Checkbox>
+                      </div>
+                    </Col>
+                  </Row>
+                </div>,
+              ]}
+            />
+            <div
+              style={{
+                padding: "10px 16px",
+                textAlign: "right",
+              }}
+            >
+              <CSVLink
+                data={this.state.csvData}
+                filename={`tanksRecord-${moment(new Date()).toISOString()}.csv`}
+              >
+                <Button
+                  size="large"
+                  className="client_export--btn"
+                  icon={<img className="icons" src={fileExport} alt="export" />}
+                  type="primary"
+                >
+                  Export
+                </Button>
+              </CSVLink>
+            </div>
+          </>
         </Drawer>
       </div>
     );
