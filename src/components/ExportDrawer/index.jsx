@@ -162,7 +162,9 @@ class ExportDrawer extends Component {
           : 0,
         "Sensor Status":
           item.node.alarms.alarmType === "sensorMissedReportsAlarm" &&
-          item.node.alarms.alarming === true,
+          item.node.alarms.alarming === true
+            ? "True"
+            : "False",
         Alerts: `High - ${alarmValues.high} & Medium - ${alarmValues.medium}`,
         Commodity: "Propane",
         "Current Volume": item.node.latestReading
