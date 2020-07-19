@@ -1,6 +1,8 @@
 import React, { Component } from "react";
 import { Table, Progress, Popover, Input, Button, Card, Select } from "antd";
 import Search from "../Search";
+import { DatePicker } from "antd";
+import moment from "moment";
 import {
   DoubleLeftOutlined,
   DoubleRightOutlined,
@@ -13,13 +15,14 @@ import filter from "../../assets/images/filter-blue.png";
 import { gql } from "apollo-boost";
 import { Query, graphql } from "react-apollo";
 import { CSVLink } from "react-csv";
-
 import Loader from "../Loader";
-import moment from "moment";
 import "../TankTable/index.css";
 import "./clientHistory.css";
 import "../../../node_modules/antd/dist/antd.compact.css";
 const { Option } = Select;
+
+const { RangePicker } = DatePicker;
+const dateFormat = "YYYY/MM/DD";
 
 const tankDetail = gql`
   query tankTableData($id: Int, $after: String, $filter: QueryFilterEntry) {
@@ -72,9 +75,8 @@ class ClientHistoryTable extends Component {
       formVisible: false,
       csvData: [],
       tankHistory: [],
-      adserchtxt: "",
-      adlevelvalue: "",
-      adlevelOp: "",
+      adlevelvalue: "0.30",
+      adlevelOp: ">=",
     };
 
     this.submitFilters = this.submitFilters.bind(this);
@@ -270,7 +272,9 @@ class ClientHistoryTable extends Component {
   }
 
   submitFilters() {
-    this.setState({ filtered: true });
+    this.setState({
+      // filtered: true
+    });
   }
   clearFilters() {
     this.setState({ filtered: false, filters: {} });
@@ -313,33 +317,26 @@ class ClientHistoryTable extends Component {
   //   // this.setState({ filters: filters });
   //   console.log("filtered", filters);
   // }
-  updateFilter(valueadvance, value) {
+  updateFilter(type, value) {
     var op = "",
-      value = "";
+      levelValue = "";
     if (value === "below10") {
       op = "<";
-      value = "0.10";
+      levelValue = "0.10";
     } else if (value === "below30") {
       op = "<";
-      value = "0.30";
+      levelValue = "0.30";
     } else if (value === "30%to80%") {
       op = "<";
-      value = "0.80";
+      levelValue = "0.80";
     } else if (value === "above80%") {
       op = ">";
-      value = "0.80";
+      levelValue = "0.80";
     }
-    this.setState(
-      {
-        formVisible: false,
-        adserchtxt: valueadvance,
-        adlevelvalue: value,
-        adlevelOp: op,
-      },
-      function () {
-        console.log("function state", this.state.adserchtxt);
-      }
-    );
+    this.setState({
+      adlevelvalue: levelValue,
+      adlevelOp: op,
+    });
     console.log("tag state", value);
   }
   setCSV(data) {
@@ -373,64 +370,15 @@ class ClientHistoryTable extends Component {
       filters,
     } = this.state;
     var filtercondition = "";
-    if (this.props.adSearchValue != "" && this.props.adLevelValue != "") {
-      if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<") {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              levelPercent: { op: ">", v: ".30" },
-            }
-          : "";
-      } else {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-            }
-          : "";
-      }
-    }
-    //Condition for level only
-    else if (this.props.adLevelValue != "" && this.props.adLevelOP != "") {
-      if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<") {
-        console.log("Beleo 30 t0 80");
-        filtercondition = this.props.adLevelValue
-          ? {
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              levelPercent: { op: ">", v: ".30" },
-            }
-          : "";
-      } else {
-        filtercondition = this.props.adLevelValue
-          ? {
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-            }
-          : "";
-      }
-    }
-    //Only searching for description
-    else if (this.props.adSearchValue != "") {
-      console.log("only description searching");
-      filtercondition = this.props.adSearchValue
-        ? { description: { op: "match", v: this.props.adSearchValue } }
-        : "";
-    } else {
-      console.log("without filter");
-      filtercondition = "";
-    }
+
+    // if (this.state.adLevelValue != "") {
+    //   filtercondition = {
+    //     levelPercent: {
+    //       op: this.state.adLevelOP,
+    //       v: this.state.adLevelValue,
+    //     },
+    //   };
+    // }
 
     console.log("Csv===", csvData);
     return (
@@ -474,14 +422,15 @@ class ClientHistoryTable extends Component {
                       extra={[
                         <Popover
                           content={
-                            <div>
+                            <div className="history__filter--popover">
+                              <p>Tank Status : </p>
                               <Select
                                 style={{ width: "100%" }}
                                 placeholder="Status"
                                 onChange={(value) =>
                                   this.updateFilter("levelPercent", value)
                                 }
-                                value={this.state.filters.levelPercent}
+                                // value={this.state.filters.levelPercent}
                               >
                                 <Option value={"below10%"}>Below 10%</Option>
                                 <Option value={"below30%"}>Below 30%</Option>
@@ -489,7 +438,30 @@ class ClientHistoryTable extends Component {
                                 <Option value={"above80%"}>Above 80%</Option>
                               </Select>
                               <br />
+                              <br />
+                              <p>Select Date Range : </p>
+                              <RangePicker
+                                defaultValue={[
+                                  moment("2020/01/01", dateFormat),
+                                  moment("2020/01/01", dateFormat),
+                                ]}
+                                format={dateFormat}
+                              />
+                              <br />
+                              <br />
                               <p>Level Gallons</p>
+                              <input
+                                className="level_input"
+                                type="text"
+                                defaultValue=""
+                                placeholder="Enter check the value of level gallon below this"
+                              />
+                              <input
+                                className="level_input"
+                                type="text"
+                                defaultValue=""
+                                placeholder="Enter check the value of level gallon greater than this"
+                              />
                               <br />
                               <br />
                               <Button
@@ -584,11 +556,6 @@ class ClientHistoryTable extends Component {
                         </Button>
                       </div>
                     </Card>
-                    <ExportDrawer
-                      visible={exportVisibleDrawer}
-                      exportDrawer={this.exportDrawer}
-                      hideForm={this.hideForm}
-                    />
                   </>
                 )
               );

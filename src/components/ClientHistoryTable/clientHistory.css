@@ -220,6 +220,17 @@ i.marker {
   background-color: var(--color-primary);
 }
 
+.history__filter--popover {
+  width: 450px;
+}
+.history__filter--popover .ant-picker.ant-picker-range {
+  width: 100%;
+}
+.history__filter--popover .level_input {
+  width: 100%;
+  border: 1px solid #d9d9d9;
+  margin: 10px auto;
+}
 /* media query */
 @media screen and (max-width: 1560px) {
   .alerts p {

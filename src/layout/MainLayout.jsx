@@ -87,6 +87,7 @@ class MainLayout extends Component {
       adserchtxt: "",
       adlevelvalue: "",
       adlevelOp: "",
+      adCommodityValue: "Propane",
       collapsed: false,
     };
     this.changeFullTab = this.changeFullTab.bind(this);
@@ -824,6 +825,7 @@ class MainLayout extends Component {
                   adSearchValue={this.state.adserchtxt}
                   adLevelValue={this.state.adlevelvalue}
                   adLevelOP={this.state.adlevelOp}
+                  adCommodityValue={this.state.adCommodityValue}
                 />
               </div>
             </Content>

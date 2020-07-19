@@ -247,7 +247,6 @@ class TankTable extends Component {
             </span>
           ),
         },
-
         {
           title: <img className="tank_img" src={wifiBlue} alt="wifi" />,
           width: "4%",
@@ -282,7 +281,7 @@ class TankTable extends Component {
                 if (error) {
                   return <div>Error</div>;
                 } else if (data) {
-                  console.log("tankTable", data);
+                  console.log("tankTable alerts ", data);
                   console.log(
                     "medium alarm",
                     data.locationEntry.tanks.aggregate.sum_highAlarmCnt
@@ -342,6 +341,7 @@ class TankTable extends Component {
               });
 
             const highOrMedium = alarmValues.high >= alarmValues.medium;
+
             return (
               <span>
                 <span>
@@ -612,6 +612,8 @@ class TankTable extends Component {
     }
   };
   render() {
+    console.log({ selectedTankId: this.props.selectedTankId });
+
     const { history } = this.props;
     const {
       formVisible,
@@ -633,39 +635,7 @@ class TankTable extends Component {
       // onSelection: this.onSelection,
     };
     var filtercondition = "";
-    if (
-      this.props.adSearchValue != "" &&
-      this.props.adCommodityValue != "" &&
-      this.props.adLevelValue != ""
-    ) {
-      if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<") {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              commodity: { op: "=", v: this.props.adCommodityValue },
-              levelPercent: { op: ">", v: ".30" },
-            }
-          : "";
-      } else {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              commodity: { op: "=", v: this.props.adCommodityValue },
-            }
-          : "";
-      }
-    } else if (
-      this.props.adSearchValue != "" &&
-      this.props.adLevelValue != ""
-    ) {
+    if (this.props.adSearchValue != "" && this.props.adLevelValue != "") {
       if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<") {
         filtercondition = this.props.adSearchValue
           ? {
@@ -763,6 +733,19 @@ class TankTable extends Component {
                 data.locationEntry.tanks.aggregate.sum_hasHighAlarm
               );
               var filterdata = [];
+              // if (data.locationEntry.tanks.edges.length > 0) {
+              //   filterdata = data.locationEntry.tanks.edges.filter(
+              //     (item) => {
+              //       return (
+              //         item.node.description
+              //           .toString()
+              //           .toLowerCase()
+              //           .indexOf(this.props.adSearchValue.toString().toLowerCase()) !== -1
+
+              //       );
+              //     }
+              //   );
+              // }
               return (
                 data &&
                 data.locationEntry && (

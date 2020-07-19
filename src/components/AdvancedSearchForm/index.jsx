@@ -56,7 +56,11 @@ class AdvancedSearchForm extends Component {
     });
   };
   callfetchValue() {
-    this.props.fetchSerachValue(this.state.serchtxt, this.state.tagValue1);
+    this.props.fetchSerachValue(
+      this.state.serchtxt,
+      this.state.tagValue1,
+      this.state.tagValue
+    );
   }
 
   SavingAdvanceSearch() {

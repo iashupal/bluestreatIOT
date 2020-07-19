@@ -129,9 +129,9 @@ class ClientLayout extends Component {
     }
     console.log("selectid", this.state.selectid);
     console.log("selectedTankId", this.state.selectid);
-    console.log("tank detail", data.tank);
+    console.log("tank detail", data);
     console.log("id", this.props.match.params.id);
-    console.log("desc", data.tank.description);
+    // console.log("desc", data.tank.description);
     const {
       formVisible,
       description,
@@ -201,8 +201,10 @@ class ClientLayout extends Component {
                   <div className="client_inr--divisn">
                     <AnimatedTank
                       percentage={
-                        data.tank.latestReading
-                          ? data.tank.latestReading.levelPercent * 100
+                        data.tank
+                          ? data.tank.latestReading
+                            ? data.tank.latestReading.levelPercent * 100
+                            : ""
                           : ""
                       }
                       duration={1.4}
@@ -211,9 +213,12 @@ class ClientLayout extends Component {
                       percentageSign="%"
                     />
                     <div>
-                      <Heading heading={data.tank.id} fontSize="20px" />
                       <Heading
-                        heading={data.tank.description}
+                        heading={data.tank ? data.tank.id : ""}
+                        fontSize="20px"
+                      />
+                      <Heading
+                        heading={data.tank ? data.tank.description : ""}
                         fontSize="20px"
                       />
                     </div>
@@ -310,26 +315,29 @@ class ClientLayout extends Component {
                     <TankInfo
                       tankHead="Current Level(L)"
                       tankDetail={
-                        data.tank.latestReading
-                          ? data.tank.latestReading.levelGallons === null
-                            ? "0 G"
-                            : data.tank.latestReading.levelGallons + " " + "G"
-                          : "0 G"
+                        data.tank
+                          ? data.tank.latestReading
+                            ? data.tank.latestReading.levelGallons === null
+                              ? "0"
+                              : data.tank.latestReading.levelGallons + " " + "G"
+                            : "0"
+                          : 0
                       }
                     />
                     <TankInfo
                       tankHead="Refill Potential"
                       tankDetail={
-                        data.tank.latestReading
-                          ? data.tank.latestReading.refillPotentialGallons ===
-                            null
-                            ? "0 G"
-                            : data.tank.latestReading.refillPotentialGallons +
-                              " " +
-                              "G"
-                          : "0 G"
+                        data.tank
+                          ? data.tank.latestReading
+                            ? data.tank.latestReading.refillPotentialGallons ===
+                              null
+                              ? "0"
+                              : data.tank.latestReading.refillPotentialGallons +
+                                " " +
+                                "G"
+                            : "0"
+                          : 0
                       }
-                      L
                     />
                     {/* <TankInfo
                       tankHead="# of Alerts Last 30 Days"
@@ -340,16 +348,18 @@ class ClientLayout extends Component {
                     <TankInfo
                       tankHead="Current Temp."
                       tankDetail={
-                        data.tank.latestReading
-                          ? data.tank.latestReading.temperatureCelsius === null
-                            ? "0 C"
-                            : 80 -
-                              data.tank.latestReading.temperatureCelsius +
-                              " " +
-                              "C"
-                          : "0 C"
+                        data.tank
+                          ? data.tank.latestReading
+                            ? data.tank.latestReading.temperatureCelsius ===
+                              null
+                              ? "0"
+                              : 80 -
+                                data.tank.latestReading.temperatureCelsius +
+                                " " +
+                                "C"
+                            : "0"
+                          : 0
                       }
-                      C
                     />
                     {/* <TankInfo
                       tankHead="Avg. Temp. Last 30 Days"
@@ -358,11 +368,16 @@ class ClientLayout extends Component {
                     <TankInfo
                       tankHead="Battery"
                       tankDetail={
-                        data.tank.latestReading
-                          ? data.tank.latestReading.batteryVoltage + " " + "V"
-                          : "0 V"
+                        data.tank
+                          ? data.tank.latestReading
+                            ? data.tank.latestReading.batteryVoltage === null
+                              ? "0"
+                              : data.tank.latestReading.batteryVoltage +
+                                " " +
+                                "V"
+                            : "0"
+                          : 0
                       }
-                      V
                     />
                   </div>
                   <div className="client_top--alerts">
