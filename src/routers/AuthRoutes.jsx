@@ -1,13 +1,13 @@
 import React from "react";
 import { Switch, Route } from "react-router-dom";
-import Loader from "../components/Loader";
-import Loadable from "react-loadable";
+// import Loader from "../components/Loader";
+// import Loadable from "react-loadable";
 import ForgotPassword from "../components/Accounts/ForgotPassword";
-
-const Login = Loadable({
-  loader: () => import("../components/Accounts/Login"),
-  loading: Loader,
-});
+import Login from "../components/Accounts/Login";
+// const Login = Loadable({
+//   loader: () => import("../components/Accounts/Login"),
+//   loading: Loader,
+// });
 
 function AuthRouter() {
   return (

@@ -64,7 +64,7 @@ class AdvancedSearchForm extends Component {
   }
 
   SavingAdvanceSearch() {
-    console.closeTag("Ad", "SavingAdvanceSearch");
+    // console.closeTag("Ad", "SavingAdvanceSearch");
     this.props.SavingAdvanceSearch();
   }
   searchTextfromAdvanceTab(searchtext) {

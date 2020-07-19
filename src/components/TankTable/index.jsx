@@ -270,7 +270,7 @@ class TankTable extends Component {
                 id: this.props.selectedTankId,
               }}
             >
-              {({ data, error, loading, fetchMore }) => {
+              {({ data, error, loading }) => {
                 //  <>
                 if (loading) {
                   return (
@@ -282,7 +282,8 @@ class TankTable extends Component {
                 if (error) {
                   return <div>Error</div>;
                 } else if (data) {
-                  console.log("tankTable", data);
+                  console.log("alert id", this.props.selectedTankId);
+                  console.log("alerts ", data);
                   console.log(
                     "medium alarm",
                     data.locationEntry.tanks.aggregate.sum_highAlarmCnt

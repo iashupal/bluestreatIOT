@@ -22,7 +22,7 @@ import "../../../node_modules/antd/dist/antd.compact.css";
 const { Option } = Select;
 
 const { RangePicker } = DatePicker;
-const dateFormat = "YYYY/MM/DD";
+// const dateFormat = "YYYY/MM/DD";
 
 const tankDetail = gql`
   query tankTableData($id: Int, $after: String, $filter: QueryFilterEntry) {
@@ -75,8 +75,8 @@ class ClientHistoryTable extends Component {
       formVisible: false,
       csvData: [],
       tankHistory: [],
-      adlevelvalue: "0.30",
-      adlevelOp: ">=",
+      adlevelvalue: "",
+      adlevelOp: "",
     };
 
     this.submitFilters = this.submitFilters.bind(this);
@@ -273,71 +273,65 @@ class ClientHistoryTable extends Component {
 
   submitFilters() {
     this.setState({
-      // filtered: true
+      filtered: true,
+      // filters: this.state.filters,
     });
   }
   clearFilters() {
     this.setState({ filtered: false, filters: {} });
   }
 
-  // updateFilter(type, value) {
-  //   let filters = this.state.filters;
-  //   // switch (type) {
-  //   //   case "levelPercent":
-  //   //     filters.levelPercent = value;
-  //   //     break;
-  //   //   default:
-  //   //     console.log("Error");
-  //   // }
-  //   var op = "",
-  //     value = "";
-  //   if (value === "below10") {
-  //     op = "<";
-  //     value = "0.10";
-  //   } else if (value === "below30") {
-  //     op = "<";
-  //     value = "0.30";
-  //   } else if (value === "30%to80%") {
-  //     op = "<";
-  //     value = "0.80";
-  //   } else if (value === "above80%") {
-  //     op = ">";
-  //     value = "0.80";
-  //   }
-  //   switch (type) {
-  //     case "levelPercent":
-  //       filters.levelPercent = value;
-  //       break;
-  //     default:
-  //       console.log("Error");
-  //   }
-  //   this.setState({ filters: type }, function () {
-  //     console.log("function state", this.state.filters);
-  //   });
-  //   // this.setState({ filters: filters });
-  //   console.log("filtered", filters);
-  // }
   updateFilter(type, value) {
-    var op = "",
-      levelValue = "";
-    if (value === "below10") {
-      op = "<";
-      levelValue = "0.10";
-    } else if (value === "below30") {
-      op = "<";
-      levelValue = "0.30";
-    } else if (value === "30%to80%") {
-      op = "<";
-      levelValue = "0.80";
-    } else if (value === "above80%") {
-      op = ">";
-      levelValue = "0.80";
+    // let filters = this.state.filters;
+    switch (type) {
+      case "levelPercent":
+        // filters.levelValue = value;
+        var op = "",
+          levelValue = "";
+        console.log("enter function");
+        console.log("option selected", value);
+        if (value === "below10") {
+          op = "<";
+          levelValue = "0.10";
+          console.log("below 10");
+        } else if (value === "below30") {
+          op = "<";
+          levelValue = "0.30";
+        } else if (value === "30to80") {
+          op = "<";
+          levelValue = "0.80";
+        } else if (value === "above80") {
+          op = ">";
+          levelValue = "0.80";
+        }
+        break;
+      case "timestamp":
+        // var op = "",
+        //   levelDate = "";
+        // filters.timestamp = moment(value[0]).format("YYYY-MM-DD");
+        // filters.timestamp = moment(value[1]).format("YYYY-MM-DD");
+        break;
+      // case "levelGallon":
+      default:
+        console.log("Error");
     }
-    this.setState({
-      adlevelvalue: levelValue,
-      adlevelOp: op,
-    });
+
+    this.setState(
+      {
+        adlevelvalue: levelValue,
+        adlevelOp: op,
+        // filters: filters,
+      },
+      function () {
+        console.log("function state ----", this.state.adlevelvalue);
+      }
+    );
+
     console.log("tag state", value);
+    console.log("level value-----", levelValue);
+    console.log("level op----", op);
+    console.log("level value state", this.state.adlevelvalue);
+    console.log("level op state", this.state.adlevelOp);
   }
   setCSV(data) {
     console.log(1);
@@ -370,15 +364,16 @@ class ClientHistoryTable extends Component {
       filters,
     } = this.state;
     var filtercondition = "";
-
-    // if (this.state.adLevelValue != "") {
-    //   filtercondition = {
-    //     levelPercent: {
-    //       op: this.state.adLevelOP,
-    //       v: this.state.adLevelValue,
-    //     },
-    //   };
-    // }
+    console.log("adlevelValue", this.state.adlevelvalue);
+    if (this.state.adlevelvalue != "") {
+      console.log("enter inot filter condn");
+      filtercondition = {
+        levelPercent: {
+          op: this.state.adlevelOp,
+          v: this.state.adlevelvalue,
+        },
+      };
+    }
 
     console.log("Csv===", csvData);
     return (
@@ -400,7 +395,7 @@ class ClientHistoryTable extends Component {
               );
             }
             if (error) {
-              return <div>{JSON.stringify(error)}</div>;
+              return console.log(JSON.stringify(error));
             } else if (data) {
               csvData = data.tank.readings.edges;
               console.log("tank history", data);
@@ -432,36 +427,50 @@ class ClientHistoryTable extends Component {
                                 }
                                 // value={this.state.filters.levelPercent}
                               >
-                                <Option value={"below10%"}>Below 10%</Option>
-                                <Option value={"below30%"}>Below 30%</Option>
-                                <Option value={"30%to80%"}>30% to 80%</Option>
-                                <Option value={"above80%"}>Above 80%</Option>
+                                <Option value={"below10"}>Below 10%</Option>
+                                <Option value={"below30"}>Below 30%</Option>
+                                <Option value={"30to80"}>30% to 80%</Option>
+                                <Option value={"above80"}>Above 80%</Option>
                               </Select>
                               <br />
                               <br />
                               <p>Select Date Range : </p>
                               <RangePicker
-                                defaultValue={[
-                                  moment("2020/01/01", dateFormat),
-                                  moment("2020/01/01", dateFormat),
-                                ]}
-                                format={dateFormat}
+                                // defaultValue={[
+                                //   moment("2020/01/01", dateFormat),
+                                //   moment("2020/01/01", dateFormat),
+                                // ]}
+                                onChange={(value) =>
+                                  this.updateFilter("timestamp", value)
+                                }
+                                // format={dateFormat}
                               />
                               <br />
                               <br />
                               <p>Level Gallons</p>
+                              <Select
+                                style={{ width: "100%" }}
+                                placeholder="level gallons"
+                                onChange={(value) =>
+                                  this.updateFilter("levelGallons", value)
+                                }
+                                // value={this.state.filters.levelPercent}
+                              >
+                                <Option value={">="}>
+                                  Greater than equal to
+                                </Option>
+                                <Option value={"<="}>less than equal to</Option>
+                                <Option selected value={"=="}>
+                                  equal to
+                                </Option>
+                              </Select>
                               <input
                                 className="level_input"
                                 type="text"
                                 defaultValue=""
                                 placeholder="Enter check the value of level gallon below this"
                               />
-                              <input
-                                className="level_input"
-                                type="text"
-                                defaultValue=""
-                                placeholder="Enter check the value of level gallon greater than this"
-                              />
+                              G
                               <br />
                               <br />
                               <Button

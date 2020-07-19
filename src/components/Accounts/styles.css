@@ -81,6 +81,12 @@
   outline: none;
   cursor: pointer;
 }
+.signin_btn.ant-btn-primary:hover,
+.signin_btn.ant-btn-primary:focus {
+  background: #40a9ff;
+  border-color: #40a9ff;
+  color: var(--color-white);
+}
 .signin_btn img {
   width: 15px;
   transform: rotate(180deg);
