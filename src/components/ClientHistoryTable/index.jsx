@@ -77,6 +77,11 @@ class ClientHistoryTable extends Component {
       tankHistory: [],
       adlevelvalue: "",
       adlevelOp: "",
+      showFilterBtn: false,
+      startDate: "",
+      endDate: "",
+      levelGallonValue: "",
+      levelGallonOp: "",
     };
 
     this.submitFilters = this.submitFilters.bind(this);
@@ -282,7 +287,7 @@ class ClientHistoryTable extends Component {
   }
 
   updateFilter(type, value) {
-    // let filters = this.state.filters;
+    let filters = this.state.filters;
     switch (type) {
       case "levelPercent":
         // filters.levelValue = value;
@@ -304,28 +309,43 @@ class ClientHistoryTable extends Component {
           op = ">";
           levelValue = "0.80";
         }
+        // let obj = {};
+        // obj.op = op;
+        // obj.levelValue = levelValue;
+        // filters.levelPercent = obj;
+        // this.setState({ filters: obj }, function () {
+        //   console.log("function state ----", this.state.filters);
+        // });
+        // console.log("filters levelpercent", filters);
+        this.setState({
+          adlevelvalue: levelValue,
+          adlevelOp: op,
+          showFilterBtn: true,
+          // filters: filters,
+        });
         break;
       case "timestamp":
-        // var op = "",
-        //   levelDate = "";
-        // filters.timestamp = moment(value[0]).format("YYYY-MM-DD");
-        // filters.timestamp = moment(value[1]).format("YYYY-MM-DD");
+        console.log("select date", value);
+
+        this.setState({
+          startDate: moment(value[0]).format("YYYY-MM-DD"),
+          endDate: moment(value[1]).format("YYYY-MM-DD"),
+          showFilterBtn: true,
+        });
         break;
-      // case "levelGallon":
+      case "levelGallons":
+        console.log("level gallons", value);
+        this.setState({
+          levelGallonOp: value,
+          // levelGallonValue: val,
+          showFilterBtn: true,
+        });
+        console.log("level gallons", value);
+        console.log("input value", this.state.levelGallonValue);
+        break;
       default:
         console.log("Error");
     }
-
-    this.setState(
-      {
-        adlevelvalue: levelValue,
-        adlevelOp: op,
-        // filters: filters,
-      },
-      function () {
-        console.log("function state ----", this.state.adlevelvalue);
-      }
-    );
 
     console.log("tag state", value);
     console.log("level value-----", levelValue);
@@ -333,6 +353,7 @@ class ClientHistoryTable extends Component {
     console.log("level value state", this.state.adlevelvalue);
     console.log("level op state", this.state.adlevelOp);
   }
+
   setCSV(data) {
     console.log(1);
     let entryHistory = [];
@@ -362,17 +383,59 @@ class ClientHistoryTable extends Component {
       exportVisibleDrawer,
       filtered,
       filters,
+      showFilterBtn,
+      startDate,
+      endDate,
+      levelGallonValue,
+      levelGallonOp,
     } = this.state;
-    var filtercondition = "";
+    var filtercondition = {};
     console.log("adlevelValue", this.state.adlevelvalue);
-    if (this.state.adlevelvalue != "") {
-      console.log("enter inot filter condn");
-      filtercondition = {
-        levelPercent: {
-          op: this.state.adlevelOp,
-          v: this.state.adlevelvalue,
-        },
-      };
+
+    if (filtered) {
+      console.log("enter inot filter condn", filters);
+      if (this.state.adlevelvalue != "") {
+        filtercondition = {
+          levelPercent: {
+            op: this.state.adlevelOp,
+            v: this.state.adlevelvalue,
+          },
+        };
+      } else if (startDate != "" && endDate != "") {
+        filtercondition = {
+          timestamp: {
+            op: ">=",
+            v: startDate,
+          },
+          timestamp: {
+            op: "<=",
+            v: endDate,
+          },
+        };
+        // filtercondition = {
+        //   levelPercent: {
+        //     op: this.state.adlevelOp,
+        //     v: this.state.adlevelvalue,
+        //   },
+        //   timestamp: {
+        //     op: ">=",
+        //     v: startDate,
+        //   },
+        //   timestamp: {
+        //     op: "<=",
+        //     v: endDate,
+        //   },
+        //   // levelPercent: filters,
+        // };
+        console.log("level Percent-----", filtercondition);
+      } else if (levelGallonValue != "" && levelGallonOp != "") {
+        filtercondition = {
+          levelGallons: {
+            op: levelGallonOp,
+            v: levelGallonValue,
+          },
+        };
+      }
     }
 
     console.log("Csv===", csvData);
@@ -466,9 +529,15 @@ class ClientHistoryTable extends Component {
                               </Select>
                               <input
                                 className="level_input"
-                                type="text"
-                                defaultValue=""
+                                type="number"
+                                // defaultValue=
+                                defaultValue={levelGallonValue}
                                 placeholder="Enter check the value of level gallon below this"
+                                onChange={(e) =>
+                                  this.setState({
+                                    levelGallonValue: e.target.defaultValue,
+                                  })
+                                }
                               />
                               G
                               <br />
@@ -482,7 +551,8 @@ class ClientHistoryTable extends Component {
                                     ? this.clearFilters
                                     : this.submitFilters
                                 }
-                                disabled={Object.keys(filters).length === 0}
+                                disabled={showFilterBtn === false}
+                                // disabled={Object.keys(filters).length === 0}
                               >
                                 {filtered ? "Clear filters" : "Filter"}
                               </Button>
