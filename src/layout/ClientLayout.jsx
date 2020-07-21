@@ -129,7 +129,7 @@ class ClientLayout extends Component {
     }
     console.log("selectid", this.state.selectid);
     console.log("selectedTankId", this.state.selectid);
-    console.log("tank detail", data);
+    console.log("tank specific detail", data);
     console.log("id", this.props.match.params.id);
     // console.log("desc", data.tank.description);
     const {

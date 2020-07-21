@@ -9,7 +9,6 @@ const lineGraph = gql`
   query lineGraphData($id: Int, $fromdate: String, $todate: String) {
     tank(id: $id) {
       id
-
       specifications {
         capacity
         capacityUnits
@@ -33,11 +32,17 @@ const lineGraph = gql`
     }
   }
 `;
+
 var xAxisData = [];
 var yAxisData = [];
-var today = new Date("2020-05-18T19:36:49.000Z");
-var todaysDate = new Date("2020-05-18T19:36:49.000Z");
+var today = new Date();
+var todaysDate = new Date();
 var last30days = new Date(today.setDate(today.getDate() - 30));
+var firstday = new Date(today.getFullYear(), 0, 1); // XXXX/01/01
+var diff = Math.ceil((today - firstday) / 86400000);
+// a quarter is about 365/4
+var quarter = parseInt(diff / (365 / 4)) + 1;
+// if today is 2012/01/01, the value of quarter  is  1.
 const options = {
   chart: {
     type: "area",
@@ -140,6 +145,12 @@ function LineChart(props) {
   // console.log(date);
   var today = new Date();
   // var dateLimit = new Date(new Date().setDate(today.getDate()));
+  var firstday = new Date(today.getFullYear(), 0, 1); // XXXX/01/01
+  var diff = Math.ceil((today - firstday) / 86400000);
+  // a quarter is about 365/4
+  var quarter = parseInt(diff / (365 / 4)) + 1;
+  // if today is 2012/01/01, the value of quarter  is  1.
+  console.log("quarter", quarter);
   console.log("timestamp", props.timestamp);
   console.log("today", today.toUTCString());
   console.log("Today: ", todaysDate.toUTCString());

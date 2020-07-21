@@ -313,7 +313,8 @@ class MainLayout extends Component {
             <Sider
               style={{
                 overflow: "auto",
-                height: "100vh",
+                height: "110vh",
+                // height: "112vh",
                 left: 0,
               }}
               theme="light"
