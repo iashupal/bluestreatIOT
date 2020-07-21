@@ -103,6 +103,7 @@ const tankTable = gql`
               levelGallons
               temperatureCelsius
               batteryVoltage
+              timestamp
             }
             externalId
             typeTags
@@ -263,7 +264,7 @@ class TankTable extends Component {
           ),
         },
         {
-          title: (
+          title: (text) => (
             <Query
               query={tankAlerts}
               variables={{
@@ -329,6 +330,7 @@ class TankTable extends Component {
               }}
             </Query>
           ),
+
           sorter: (a, b) => a.tankNum - b.tankNum,
           sortDirections: ["descend", "ascend"],
           width: "25%",
@@ -724,7 +726,6 @@ class TankTable extends Component {
       console.log("without filter");
       filtercondition = "";
     }
-
     return (
       <div className="tank_table">
         <Query

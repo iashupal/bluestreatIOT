@@ -10,6 +10,7 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import ExportDrawer from "../ExportDrawer";
+import Pagination from "react-js-pagination";
 import fileExport from "../../assets/images/file-export-white.png";
 import filter from "../../assets/images/filter-blue.png";
 import { gql } from "apollo-boost";
@@ -25,7 +26,14 @@ const { RangePicker } = DatePicker;
 // const dateFormat = "YYYY/MM/DD";
 
 const tankDetail = gql`
-  query tankTableData($id: Int, $after: String, $filter: QueryFilterEntry) {
+  query tankTableData(
+    $id: Int
+    $first: Int
+    $last: Int
+    $after: String
+    $before: String
+    $filter: QueryFilterEntry
+  ) {
     tank(id: $id) {
       id
       parent {
@@ -33,8 +41,10 @@ const tankDetail = gql`
         description
       }
       readings(
-        first: 10
+        first: $first
+        last: $last
         after: $after
+        before: $before
         sortDirection: desc
         sortBy: timestamp
         filter: [$filter]
@@ -82,6 +92,12 @@ class ClientHistoryTable extends Component {
       endDate: "",
       levelGallonValue: "",
       levelGallonOp: "",
+      pageCount: 1,
+      pageCursor: 1,
+      pagesize: 10,
+      activePage: 1,
+      docsCount: 10,
+      totalDocsCount: 0,
     };
 
     this.submitFilters = this.submitFilters.bind(this);
@@ -91,6 +107,8 @@ class ClientHistoryTable extends Component {
     this.hideForm = this.hideForm.bind(this);
     this.exportDrawer = this.exportDrawer.bind(this);
     this.setCSV = this.setCSV.bind(this);
+    // this.handlePrevPage = this.handlePrevPage.bind(this);
+    // this.handleNextPage = this.handleNextPage.bind(this);
 
     this.columns = [
       {
@@ -215,8 +233,8 @@ class ClientHistoryTable extends Component {
           <span>
             {record
               ? record.node.temperatureCelsius === null
-                ? "0 C"
-                : record.node.temperatureCelsius + " " + "C"
+                ? "0"
+                : record.node.temperatureCelsius + " " + "F"
               : ""}
           </span>
         ),
@@ -239,7 +257,7 @@ class ClientHistoryTable extends Component {
           <span>
             {record
               ? record.node.batteryVoltage === null
-                ? "0 V"
+                ? "0"
                 : record.node.batteryVoltage + " " + "V"
               : "0 V"}
           </span>
@@ -279,18 +297,24 @@ class ClientHistoryTable extends Component {
   submitFilters() {
     this.setState({
       filtered: true,
-      // filters: this.state.filters,
     });
   }
   clearFilters() {
-    this.setState({ filtered: false, filters: {} });
+    this.setState({
+      filtered: false,
+      filters: {},
+      levelGallonValue: "",
+      // adlevelvalue: "",
+      // adlevelOp: "",
+      // startDate: "",
+      // endDate: "",
+      // levelGallonOp: "",
+    });
   }
 
   updateFilter(type, value) {
-    let filters = this.state.filters;
     switch (type) {
       case "levelPercent":
-        // filters.levelValue = value;
         var op = "",
           levelValue = "";
         console.log("enter function");
@@ -309,19 +333,11 @@ class ClientHistoryTable extends Component {
           op = ">";
           levelValue = "0.80";
         }
-        // let obj = {};
-        // obj.op = op;
-        // obj.levelValue = levelValue;
-        // filters.levelPercent = obj;
-        // this.setState({ filters: obj }, function () {
-        //   console.log("function state ----", this.state.filters);
-        // });
-        // console.log("filters levelpercent", filters);
+
         this.setState({
           adlevelvalue: levelValue,
           adlevelOp: op,
           showFilterBtn: true,
-          // filters: filters,
         });
         break;
       case "timestamp":
@@ -335,12 +351,13 @@ class ClientHistoryTable extends Component {
         break;
       case "levelGallons":
         console.log("level gallons", value);
+        let levelGallonOperator = value;
         this.setState({
-          levelGallonOp: value,
-          // levelGallonValue: val,
+          levelGallonOp: levelGallonOperator,
+
           showFilterBtn: true,
         });
-        console.log("level gallons", value);
+        console.log("level gallons", levelGallonOperator);
         console.log("input value", this.state.levelGallonValue);
         break;
       default:
@@ -376,6 +393,15 @@ class ClientHistoryTable extends Component {
     console.log("entryHistory", csvData);
   }
 
+  // handlePageChange = (activePage) => {
+  //   this.setState({ activePage });
+  // };
+  // // Function to update the query with the new results
+  updateQuery = (previousResult, { fetchMoreResult }) => {
+    return fetchMoreResult.posts.edges.length
+      ? fetchMoreResult
+      : previousResult;
+  };
   render() {
     const {
       searchText,
@@ -388,6 +414,12 @@ class ClientHistoryTable extends Component {
       endDate,
       levelGallonValue,
       levelGallonOp,
+      pageCount,
+      pageCursor,
+      pagesize,
+      activePage,
+      docsCount,
+      totalDocsCount,
     } = this.state;
     var filtercondition = {};
     console.log("adlevelValue", this.state.adlevelvalue);
@@ -412,21 +444,7 @@ class ClientHistoryTable extends Component {
             v: endDate,
           },
         };
-        // filtercondition = {
-        //   levelPercent: {
-        //     op: this.state.adlevelOp,
-        //     v: this.state.adlevelvalue,
-        //   },
-        //   timestamp: {
-        //     op: ">=",
-        //     v: startDate,
-        //   },
-        //   timestamp: {
-        //     op: "<=",
-        //     v: endDate,
-        //   },
-        //   // levelPercent: filters,
-        // };
+
         console.log("level Percent-----", filtercondition);
       } else if (levelGallonValue != "" && levelGallonOp != "") {
         filtercondition = {
@@ -437,6 +455,7 @@ class ClientHistoryTable extends Component {
         };
       }
     }
+    // render pagination
 
     console.log("Csv===", csvData);
     return (
@@ -445,8 +464,11 @@ class ClientHistoryTable extends Component {
           query={tankDetail}
           variables={{
             id: this.props.selectedTankId,
+            last: null,
+            before: null,
             after: null,
             filter: filtercondition,
+            first: pagesize,
           }}
         >
           {({ data, error, loading, fetchMore }) => {
@@ -531,11 +553,11 @@ class ClientHistoryTable extends Component {
                                 className="level_input"
                                 type="number"
                                 // defaultValue=
-                                defaultValue={levelGallonValue}
+                                value={levelGallonValue}
                                 placeholder="Enter check the value of level gallon below this"
                                 onChange={(e) =>
                                   this.setState({
-                                    levelGallonValue: e.target.defaultValue,
+                                    levelGallonValue: e.target.value,
                                   })
                                 }
                               />
@@ -604,35 +626,145 @@ class ClientHistoryTable extends Component {
                         dataSource={data.tank.readings.edges}
                         columns={this.columns}
                         size="small"
-                        pagination={true}
+                        // pagination={true}
+                        pagination={false}
+                        // fetchMore={fetchMore}
                       />
+                      {/* <Pagination
+                        // firstPageText={<Icon type="double-left-#" />}
+                        // lastPageText={<Icon type="double-right-#" />}
+                        // prevPageText={<Icon type="left" />}
+                        // nextPageText={<Icon type="right" />}
+                        activePage={activePage}
+                        disabledClass="ant-pagination-disabled"
+                        activeClass="ant-pagination-item-active"
+                        itemsCountPerPage={docsCount}
+                        totalItemsCount={totalDocsCount}
+                        onClick={() =>
+                          fetchMore({
+                            variables: {
+                              after:
+                              data.tank.readings.pageInfo.endCursor ||
+                              null,
+                            first: pagesize,
+                            last: null,
+                            before: null,
+                            },
+                            updateQuery(previousResult, { fetchMoreResult }) {
+                              return fetchMoreResult.tank.readings.edges.length
+                                ? fetchMoreResult
+                                : previousResult;
+                            },
+                          })
+                        }
+                        // onChange={this.handlePageChange}
+                      /> */}
                       <div style={{ textAlign: "center" }}>
-                        <Button
-                          type="primary"
-                          size="medium"
-                          className="tank__loadmore"
-                          onClick={() => {
-                            const { endCursor } = data.tank.readings.pageInfo;
-                            console.log(endCursor);
-                            fetchMore({
-                              variables: { after: endCursor },
-                              updateQuery: (
-                                prevResult,
-                                { fetchMoreResult }
-                              ) => {
-                                console.log("prevResult", prevResult);
-                                console.log("fetchMoreResult", fetchMoreResult);
-                                fetchMoreResult.tank.readings.edges = [
-                                  ...prevResult.tank.readings.edges,
-                                  ...fetchMoreResult.tank.readings.edges,
-                                ];
-                                return fetchMoreResult;
-                              },
-                            });
-                          }}
-                        >
-                          Load more..
-                        </Button>
+                        {data.tank.readings.pageInfo.hasPreviousPage ? (
+                          <button
+                            // type="primary"
+                            // size="medium"
+                            // className="tank__loadmore"
+                            onClick={() => {
+                              // const {
+                              //   startCursor,
+                              // } = data.tank.readings.pageInfo;
+                              // console.log(startCursor);
+                              fetchMore({
+                                variables: {
+                                  // before: startCursor,
+                                  before:
+                                    data.tank.readings.pageInfo.startCursor ||
+                                    null,
+                                  last: pagesize,
+                                  first: null,
+                                  after: null,
+                                },
+                                // updateQuery: (
+                                //   prevResult,
+                                //   { fetchMoreResult }
+                                // ) => {
+                                //   console.log("prevResult", prevResult);
+                                //   console.log(
+                                //     "fetchMoreResult",
+                                //     fetchMoreResult
+                                //   );
+                                //   fetchMoreResult.tank.readings.edges = [
+                                //     ...prevResult.tank.readings.edges,
+                                //     ...fetchMoreResult.tank.readings.edges,
+                                //   ];
+                                //   return fetchMoreResult;
+                                // },
+                                // updateQuery()
+
+                                updateQuery(
+                                  previousResult,
+                                  { fetchMoreResult }
+                                ) {
+                                  return fetchMoreResult.tank.readings.edges
+                                    .length
+                                    ? fetchMoreResult
+                                    : previousResult;
+                                },
+                              });
+                            }}
+                          >
+                            Previous
+                          </button>
+                        ) : (
+                          ""
+                        )}
+                        {data.tank.readings.pageInfo.hasNextPage ? (
+                          <button
+                            // type="primary"
+                            // size="medium"
+                            // className="tank__loadmore"
+                            onClick={() => {
+                              // const { endCursor } = data.tank.readings.pageInfo;
+                              // console.log(endCursor);
+                              fetchMore({
+                                variables: {
+                                  // after: endCursor,
+                                  after:
+                                    data.tank.readings.pageInfo.endCursor ||
+                                    null,
+                                  first: pagesize,
+                                  last: null,
+                                  before: null,
+                                },
+                                // updateQuery: (
+                                //   prevResult,
+                                //   { fetchMoreResult }
+                                // ) => {
+                                //   console.log("prevResult", prevResult);
+                                //   console.log(
+                                //     "fetchMoreResult",
+                                //     fetchMoreResult
+                                //   );
+                                //   fetchMoreResult.tank.readings.edges = [
+                                //     ...prevResult.tank.readings.edges,
+                                //     ...fetchMoreResult.tank.readings.edges,
+                                //   ];
+                                //   return fetchMoreResult;
+                                // },
+                                // updateQuery,
+                                updateQuery(
+                                  previousResult,
+                                  { fetchMoreResult }
+                                ) {
+                                  return fetchMoreResult.tank.readings.edges
+                                    .length
+                                    ? fetchMoreResult
+                                    : previousResult;
+                                },
+                              });
+                            }}
+                          >
+                            Next
+                          </button>
+                        ) : (
+                          ""
+                        )}
                       </div>
                     </Card>
                   </>

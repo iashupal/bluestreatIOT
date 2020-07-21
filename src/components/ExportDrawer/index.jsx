@@ -11,6 +11,7 @@ import "./styles.css";
 import { gql } from "apollo-boost";
 import { Query } from "react-apollo";
 import Loader from "../Loader";
+import { objectEach } from "highcharts";
 const userId = localStorage.getItem("userId");
 const { RangePicker } = DatePicker;
 const dateFormat = "YYYY/MM/DD";
@@ -70,6 +71,7 @@ const tankTable = gql`
               levelGallons
               temperatureCelsius
               batteryVoltage
+              timestamp
             }
             externalId
             typeTags
@@ -103,6 +105,7 @@ class ExportDrawer extends Component {
         "Tank Capacity": false,
         Temperature: false,
         Battery: false,
+        timestamp: false,
       },
     };
     this.setCSV = this.setCSV.bind(this);
@@ -251,13 +254,19 @@ class ExportDrawer extends Component {
               heading="Tank Date Range to Export"
               contents={[
                 <div className="saved_searches">
-                  <Checkbox onChange={this.onChange}>
+                  <Checkbox
+                    onChange={this.onChange}
+                    name="timestamp"
+                    value="timestamp"
+                    checked={checkBoxes["timestamp"]}
+                  >
                     <RangePicker
-                      defaultValue={[
-                        moment("2020/01/01", dateFormat),
-                        moment("2020/01/01", dateFormat),
-                      ]}
-                      format={dateFormat}
+
+                    // defaultValue={[
+                    //   moment("2020/01/01", dateFormat),
+                    //   moment("2020/01/01", dateFormat),
+                    // ]}
+                    // format={dateFormat}
                     />
                   </Checkbox>
                 </div>,

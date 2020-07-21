@@ -43,6 +43,7 @@ class AdvancedSearchForm extends Component {
       tagValue3: "",
       tagValue4: "",
       serchtxt: props.initialvalue,
+      sizeValue: "",
     };
   }
   changeTab = (advancedTab) => {
@@ -86,16 +87,25 @@ class AdvancedSearchForm extends Component {
     $("#tgStatus").removeClass("ant-tag-hidden");
   };
   showTagAlerts = (tagValue2) => {
-    console.log(1);
-    this.setState({ tagValue2 });
+    console.log(2);
+    this.setState({ tagValue2 }, function () {
+      console.log("tagValue2", tagValue2);
+    });
+    $("#tgAlerts").removeClass("ant-tag-hidden");
   };
   showTagSensor = (tagValue3) => {
-    console.log(1);
-    this.setState({ tagValue3 });
+    console.log(3);
+    this.setState({ tagValue3 }, function () {
+      console.log("tagValue3", tagValue3);
+    });
+    $("#tgSensor").removeClass("ant-tag-hidden");
   };
   showTagSize = (tagValue4) => {
     console.log(1);
-    this.setState({ tagValue4 });
+    this.setState({ tagValue4 }, function () {
+      console.log("tagValue4", tagValue4);
+    });
+    $("#tgSize").removeClass("ant-tag-hidden");
   };
   closeTag(e) {
     console.log(e);
@@ -120,6 +130,32 @@ class AdvancedSearchForm extends Component {
     $("#tgStatus").addClass("ant-tag-hidden");
     // $("#dvTag_Status").remove();
   }
+  handleCloseAlerts() {
+    if (this.state.tagValue2 === "Medium") {
+      $("#medium").removeClass("activeSelectedTag");
+    } else if (this.state.tagValue2 === "High") {
+      $("#high").removeClass("activeSelectedTag");
+    }
+    $("#tgAlerts").addClass("ant-tag-hidden");
+  }
+  handleCloseSensor() {
+    if (this.state.tagValue3 === "ON") {
+      $("#on").removeClass("activeSelectedTag");
+    } else if (this.state.tagValue3 === "OFF") {
+      $("#off").removeClass("activeSelectedTag");
+    }
+    $("#tgSensor").addClass("ant-tag-hidden");
+  }
+  handleCloseSize() {
+    if (this.state.tagValue4 === ">=") {
+      $("#greaterthanequalto").removeClass("activeSelectedTag");
+    } else if (this.state.tagValue4 === "<=") {
+      $("#lessthanequalto").removeClass("activeSelectedTag");
+    } else if (this.state.tagValue4 === "=") {
+      $("#equalto").removeClass("activeSelectedTag");
+    }
+    $("#tgSize").addClass("ant-tag-hidden");
+  }
   onChange = (e) => {
     // this.setState({
     //   checked: e.target.checked,
@@ -139,6 +175,7 @@ class AdvancedSearchForm extends Component {
       tagVisible,
       tagVisible1,
       checked,
+      sizeValue,
     } = this.state;
     return (
       <div className="advanced_form">
@@ -200,22 +237,37 @@ class AdvancedSearchForm extends Component {
                 </div>
               )}
               {tagValue2 && (
-                <div className="vertrax-tag">
-                  <Tag closable onClose={this.closeTag} className="edit-tag">
+                <div className="vertrax-tag" id="dvTag_alerts">
+                  <Tag
+                    id="tgAlerts"
+                    closable
+                    onClose={() => this.handleCloseAlerts()}
+                    className="edit-tag"
+                  >
                     {tagValue2}
                   </Tag>
                 </div>
               )}
               {tagValue3 && (
-                <div className="vertrax-tag">
-                  <Tag closable onClose={this.closeTag} className="edit-tag">
+                <div className="vertrax-tag" id="dvTag_sensor">
+                  <Tag
+                    id="tgSensor"
+                    closable
+                    onClose={() => this.handleCloseSensor()}
+                    className="edit-tag"
+                  >
                     {tagValue3}
                   </Tag>
                 </div>
               )}
               {tagValue4 && (
-                <div className="vertrax-tag">
-                  <Tag closable onClose={this.closeTag} className="edit-tag">
+                <div className="vertrax-tag" id="dvTag_size">
+                  <Tag
+                    id="tgSize"
+                    closable
+                    onClose={() => this.handleCloseSize()}
+                    className="edit-tag"
+                  >
                     {tagValue4}
                   </Tag>
                 </div>
@@ -274,15 +326,6 @@ class AdvancedSearchForm extends Component {
                   )}
                   {filterTab === 1 && (
                     <div>
-                      {/* <div
-                        id="below10"
-                        className={`filter__selected ${
-                          tagValue ? "activeSelectedTag" : ""
-                        }`}
-                        onClick={() => this.showTagstatus("Below 10%")}
-                      >
-                        <p>Below 10%</p>
-                      </div> */}
                       <FilterChips
                         id="below10"
                         text="Below 10%"
@@ -313,37 +356,66 @@ class AdvancedSearchForm extends Component {
                   {filterTab === 2 && (
                     <div>
                       <FilterChips
+                        id="medium"
                         text="Medium"
                         onClick={() => this.showTagAlerts("Medium")}
-                        selectedTag={tagValue2 === "Medium"}
+                        selected={tagValue2 === "Medium"}
                       />
                       <FilterChips
+                        id="high"
                         text="High"
                         onClick={() => this.showTagAlerts("High")}
-                        selectedTag={tagValue2 === "High"}
+                        selected={tagValue2 === "High"}
                       />
                     </div>
                   )}
                   {filterTab === 3 && (
                     <div>
-                      <div
-                        className="filter__selected"
-                        onClick={() => this.showTagSensor("within 25 miles")}
-                        selected={tagValue3 === "within 25 miles"}
-                      >
-                        <p>within 25 miles</p>
-                      </div>
+                      <FilterChips
+                        id="on"
+                        text="ON"
+                        onClick={() => this.showTagSensor("ON")}
+                        selected={tagValue3 === "ON"}
+                      />
+                      <FilterChips
+                        id="off"
+                        text="OFF"
+                        onClick={() => this.showTagSensor("OFF")}
+                        selected={tagValue3 === "OFF"}
+                      />
                     </div>
                   )}
                   {filterTab === 4 && (
                     <div>
-                      <div
-                        className="filter__selected"
-                        onClick={() => this.showTagSize("within 25 miles")}
-                        selected={tagValue4 === "within 25 miles"}
-                      >
-                        <p>within 25 miles</p>
-                      </div>
+                      <input
+                        className="vertrax__tankInput"
+                        type="number"
+                        value={sizeValue}
+                        onChange={(e) =>
+                          this.setState({
+                            levelGallonValue: e.target.value,
+                          })
+                        }
+                        placeholder="Enter value for tank size"
+                      />
+                      <FilterChips
+                        id="greaterthanequalto"
+                        text="Greater than equal to"
+                        onClick={() => this.showTagSize(">=")}
+                        selected={tagValue4 === ">="}
+                      />
+                      <FilterChips
+                        id="lessthanequalto"
+                        text="Less than equal to"
+                        onClick={() => this.showTagSize("<=")}
+                        selected={tagValue4 === "<="}
+                      />
+                      <FilterChips
+                        id="equalto"
+                        text="Equal to"
+                        onClick={() => this.showTagSize("=")}
+                        selected={tagValue4 === "="}
+                      />
                     </div>
                   )}
                 </div>

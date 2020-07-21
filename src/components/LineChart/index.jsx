@@ -19,7 +19,7 @@ const lineGraph = gql`
         first: 100
         filter: [
           { timestamp: { op: ">=", v: $fromdate } }
-          { timestamp: { op: ">=", v: $todate } }
+          { timestamp: { op: "<=", v: $todate } }
         ]
       ) {
         totalCount
@@ -140,9 +140,11 @@ function LineChart(props) {
   // console.log(date);
   var today = new Date();
   // var dateLimit = new Date(new Date().setDate(today.getDate()));
+  console.log("timestamp", props.timestamp);
   console.log("today", today.toUTCString());
   console.log("Today: ", todaysDate.toUTCString());
   console.log("Last 30th day: " + last30days.toUTCString());
+  console.log("tank table history data", props.filtercondition);
   const { loading, error, data } = useQuery(lineGraph, {
     variables: {
       id: props.selectedTankId,

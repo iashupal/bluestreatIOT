@@ -353,10 +353,13 @@ class ClientLayout extends Component {
                             ? data.tank.latestReading.temperatureCelsius ===
                               null
                               ? "0"
-                              : 80 -
-                                data.tank.latestReading.temperatureCelsius +
+                              : Math.round(
+                                  data.tank.latestReading.temperatureCelsius *
+                                    1.8 +
+                                    32
+                                ) +
                                 " " +
-                                "C"
+                                "F"
                             : "0"
                           : 0
                       }
