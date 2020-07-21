@@ -240,7 +240,7 @@ class ExportDrawer extends Component {
                 type="primary"
               >
                 Current Tanks in View(
-                {tankData ? tankData.totalCount : ""})
+                {tankData.edges?.length || ""})
               </Button>
               <Button onClick={hideForm} size="large" className="filter_btn">
                 Selected Tanks(
@@ -261,12 +261,14 @@ class ExportDrawer extends Component {
                     checked={checkBoxes["timestamp"]}
                   >
                     <RangePicker
-
-                    // defaultValue={[
-                    //   moment("2020/01/01", dateFormat),
-                    //   moment("2020/01/01", dateFormat),
-                    // ]}
-                    // format={dateFormat}
+                      // defaultValue={[
+                      //   moment("2020/01/01", dateFormat),
+                      //   moment("2020/01/01", dateFormat),
+                      // ]}
+                      // format={dateFormat}
+                      onChange={(moment, [from, to]) =>
+                        this.props.applyDateFilter(from, to)
+                      }
                     />
                   </Checkbox>
                 </div>,
