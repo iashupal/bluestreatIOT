@@ -731,11 +731,6 @@ class MainLayout extends Component {
                   {description === description ? (
                     <div className="vertrax_rightSectn--header">
                       <div className="vertrax_header--all">
-                        {/* <i
-                          className="far fa-folder-open"
-                          onClick={() => this.toggleCollapse(collapsed)}
-                        /> */}
-
                         {!collapsed ? (
                           <MenuUnfoldOutlined
                             className="app__navTrigger"
@@ -853,7 +848,6 @@ export default graphql(leftPanel, {
       variables: {
         id: userId,
         username: username,
-        // id: props.match.params.id,
       },
     };
   },

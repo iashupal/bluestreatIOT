@@ -103,6 +103,7 @@ class ClientLayout extends Component {
       username: username,
       description: "",
       selectid: this.props.match.params.id,
+      filterChildData: {},
     };
     this.showForm = this.showForm.bind(this);
     this.hideForm = this.hideForm.bind(this);
@@ -118,6 +119,10 @@ class ClientLayout extends Component {
       formVisible: false,
     });
   }
+  handleChildClientHistory = (filtercondition) => {
+    console.log("filter child data", filtercondition);
+    this.setState({ filterChildData: filtercondition });
+  };
   render() {
     let { data } = this.props;
     if (data.loading) {
@@ -139,6 +144,7 @@ class ClientLayout extends Component {
       mode,
       entry,
       selectid,
+      filterChildData,
     } = this.state;
     return (
       <Fragment>
@@ -410,12 +416,18 @@ class ClientLayout extends Component {
                 </div>
               </div>
               <div className="client_RghtSectn">
-                <LineChart selectedTankId={selectid} />
+                <LineChart
+                  selectedTankId={selectid}
+                  passFilteredData={filterChildData}
+                />
               </div>
             </div>
             {/* section 3 */}
             <div className="vertrax_clientLayout">
-              <ClientHistoryTable selectedTankId={selectid} />
+              <ClientHistoryTable
+                selectedTankId={selectid}
+                updateParent={this.handleChildClientHistory}
+              />
             </div>
           </div>
           <AdvancedSearchForm

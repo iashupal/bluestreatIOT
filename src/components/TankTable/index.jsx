@@ -21,6 +21,8 @@ import "../../../node_modules/antd/dist/antd.compact.css";
 import { gql } from "apollo-boost";
 import { Query } from "react-apollo";
 import { data } from "jquery";
+import lodash from "lodash";
+
 const userId = localStorage.getItem("userId");
 
 const tankAlerts = gql`
@@ -157,7 +159,8 @@ class TankTable extends Component {
       currentPage: 1,
       checked: false,
       pageData: {},
-
+      filtercondition: {},
+      filteredByDate: false,
       columns: [
         {
           title: "Tank Number",
@@ -563,78 +566,32 @@ class TankTable extends Component {
       nodeSelector: "th",
     };
   }
-  showForm() {
-    this.setState({
-      formVisible: true,
-      mode: "advanced",
-    });
+
+  componentDidMount() {
+    this.updateFiltersFromProps();
   }
 
-  showCustomizedForm = () => {
-    this.setState({
-      formVisible: true,
-      mode: "customized",
-      clicked: false,
-      //   entry
-    });
-  };
-
-  exportDrawer = () => {
-    this.setState({
-      exportVisibleDrawer: true,
-    });
-  };
-
-  hideForm() {
-    this.setState({
-      formVisible: false,
-      exportVisibleDrawer: false,
-    });
-  }
-  onSelectChange = (selectedRowKeys) => {
-    if (selectedRowKeys.length > 1) {
-      const lastSelectedRowIndex = [...selectedRowKeys].pop();
-      this.setState({ selectedRowKeys: lastSelectedRowIndex });
-    }
-    this.setState({ selectedRowKeys });
-    console.log("selectedRowKeys changed: ", selectedRowKeys);
-  };
-  setSelection = (e) => {
-    this.setState({
-      selectedRowKeys: [],
-      selectionEnabled: e.target.checked,
-    });
-    console.log("selectedKeys", this.state.selectedRowKeys);
-  };
-  redirectToHome = (record) => {
-    const { history } = this.props;
-    if (history) history.push(`/tank-details/${record.node.id}`);
-  };
-  addAlertCounter = (alarm) => {
-    if (alarm.alarming === true) {
-    }
-  };
-  render() {
-    const { history } = this.props;
-    const {
-      formVisible,
-      mode,
-      entry,
-      exportVisibleDrawer,
-      selectedRowKeys,
-      selectionEnabled,
-      pageSize,
-      currentPage,
-      pageData,
-    } = this.state;
-
-    const rowSelection = {
-      selectedRowKeys,
-      onChange: this.onSelectChange,
-      hideDefaultSelections: true,
-      type: "checkbox",
-      // onSelection: this.onSelection,
+  componentDidUpdate(prevProps) {
+    const prevPropsValues = {
+      adSearchValue: prevProps.adSearchValue,
+      adCommodityValue: prevProps.adCommodityValue,
+      adLevelValue: prevProps.adLevelValue,
+      adLevelOP: prevProps.adLevelOP,
     };
+
+    const currentPropsValues = {
+      adSearchValue: this.props.adSearchValue,
+      adCommodityValue: this.props.adCommodityValue,
+      adLevelValue: this.props.adLevelValue,
+      adLevelOP: this.props.adLevelOP,
+    };
+
+    if (!lodash.isEqual(prevPropsValues, currentPropsValues)) {
+      this.updateFiltersFromProps();
+    }
+  }
+
+  updateFiltersFromProps = () => {
     var filtercondition = "";
     if (
       this.props.adSearchValue != "" &&
@@ -726,6 +683,98 @@ class TankTable extends Component {
       console.log("without filter");
       filtercondition = "";
     }
+
+    this.setState({ filtercondition });
+  };
+
+  showForm() {
+    this.setState({
+      formVisible: true,
+      mode: "advanced",
+    });
+  }
+
+  showCustomizedForm = () => {
+    this.setState({
+      formVisible: true,
+      mode: "customized",
+      clicked: false,
+      //   entry
+    });
+  };
+
+  exportDrawer = () => {
+    this.setState({
+      exportVisibleDrawer: true,
+    });
+  };
+
+  hideForm() {
+    this.setState({
+      formVisible: false,
+      exportVisibleDrawer: false,
+    });
+  }
+
+  applyDateFilter = (from, to) => {
+    const filters = { ...this.state.filtercondition };
+    if (from && to) {
+      Object.assign(filters, {
+        timestamp: { op: ">=", v: new Date(from).toISOString() },
+        timestamp: { op: "<=", v: new Date(to).toISOString() },
+      });
+    } else {
+      delete filters.timestamp;
+    }
+    this.setState({ filtercondition: { ...filters }, filteredByDate: true });
+  };
+
+  onSelectChange = (selectedRowKeys) => {
+    if (selectedRowKeys.length > 1) {
+      const lastSelectedRowIndex = [...selectedRowKeys].pop();
+      this.setState({ selectedRowKeys: lastSelectedRowIndex });
+    }
+    this.setState({ selectedRowKeys });
+    console.log("selectedRowKeys changed: ", selectedRowKeys);
+  };
+  setSelection = (e) => {
+    this.setState({
+      selectedRowKeys: [],
+      selectionEnabled: e.target.checked,
+    });
+    console.log("selectedKeys", this.state.selectedRowKeys);
+  };
+  redirectToHome = (record) => {
+    const { history } = this.props;
+    if (history) history.push(`/tank-details/${record.node.id}`);
+  };
+  addAlertCounter = (alarm) => {
+    if (alarm.alarming === true) {
+    }
+  };
+  render() {
+    const { history } = this.props;
+    const {
+      formVisible,
+      mode,
+      entry,
+      exportVisibleDrawer,
+      selectedRowKeys,
+      selectionEnabled,
+      pageSize,
+      currentPage,
+      pageData,
+      filteredByDate,
+      filtercondition,
+    } = this.state;
+
+    const rowSelection = {
+      selectedRowKeys,
+      onChange: this.onSelectChange,
+      hideDefaultSelections: true,
+      type: "checkbox",
+    };
+
     return (
       <div className="tank_table">
         <Query
@@ -751,6 +800,7 @@ class TankTable extends Component {
               return <div>Error</div>;
             } else if (data) {
               if (
+                filteredByDate ||
                 !Object.keys(pageData).length ||
                 String(this.state.selectedTankId) !==
                   String(this.props.selectedTankId)
@@ -758,13 +808,13 @@ class TankTable extends Component {
                 this.setState({
                   pageData: { ...data.locationEntry.tanks },
                   selectedTankId: this.props.selectedTankId,
+                  filteredByDate: false,
                 });
               console.log("tankTable", data);
               console.log(
                 "high alarm",
                 data.locationEntry.tanks.aggregate.sum_hasHighAlarm
               );
-              var filterdata = [];
               return (
                 data &&
                 data.locationEntry && (
@@ -774,7 +824,7 @@ class TankTable extends Component {
                         dataSource={data.locationEntry.tanks.edges}
                         columns={this.state.columns}
                         size="small"
-                        onRow={(record, rowIndex) => {
+                        onRow={(record) => {
                           return {
                             onClick: (event) => {
                               this.redirectToHome(record);
@@ -866,6 +916,7 @@ class TankTable extends Component {
           selectedCheckboxKeys={selectedRowKeys}
           tanksDataId={this.props.selectedTankId}
           tankData={pageData}
+          applyDateFilter={(from, to) => this.applyDateFilter(from, to)}
         />
       </div>
     );

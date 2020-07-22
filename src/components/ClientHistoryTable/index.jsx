@@ -1,15 +1,8 @@
 import React, { Component } from "react";
 import { Table, Progress, Popover, Input, Button, Card, Select } from "antd";
-import Search from "../Search";
 import { DatePicker } from "antd";
 import moment from "moment";
-import {
-  DoubleLeftOutlined,
-  DoubleRightOutlined,
-  LeftOutlined,
-  RightOutlined,
-} from "@ant-design/icons";
-import ExportDrawer from "../ExportDrawer";
+
 import Pagination from "react-js-pagination";
 import fileExport from "../../assets/images/file-export-white.png";
 import filter from "../../assets/images/filter-blue.png";
@@ -20,10 +13,10 @@ import Loader from "../Loader";
 import "../TankTable/index.css";
 import "./clientHistory.css";
 import "../../../node_modules/antd/dist/antd.compact.css";
+import { FastForwardFilled } from "@ant-design/icons";
 const { Option } = Select;
 
 const { RangePicker } = DatePicker;
-// const dateFormat = "YYYY/MM/DD";
 
 const tankDetail = gql`
   query tankTableData(
@@ -77,6 +70,7 @@ class ClientHistoryTable extends Component {
   constructor(props) {
     super(props);
     this.state = {
+      filtercondition: {},
       loading: false,
       searched: false,
       searchText: null,
@@ -98,6 +92,7 @@ class ClientHistoryTable extends Component {
       activePage: 1,
       docsCount: 10,
       totalDocsCount: 0,
+      selectedTankId: "",
     };
 
     this.submitFilters = this.submitFilters.bind(this);
@@ -135,7 +130,6 @@ class ClientHistoryTable extends Component {
       },
       {
         title: "Tank Status",
-        // defaultSortOrder: "ascend",
         sortDirections: ["ascend", "descend"],
         sorter: (a, b) => {
           if (
@@ -295,6 +289,7 @@ class ClientHistoryTable extends Component {
   }
 
   submitFilters() {
+    this.updateFiltersFromState();
     this.setState({
       filtered: true,
     });
@@ -303,15 +298,76 @@ class ClientHistoryTable extends Component {
     this.setState({
       filtered: false,
       filters: {},
+      filtercondition: {},
       levelGallonValue: "",
-      // adlevelvalue: "",
-      // adlevelOp: "",
-      // startDate: "",
-      // endDate: "",
-      // levelGallonOp: "",
+      adlevelvalue: "",
+      adlevelOp: "",
+      startDate: "",
+      endDate: "",
+      levelGallonOp: "",
     });
   }
+  updateFiltersFromState = () => {
+    let filtercondition = this.state.filtercondition;
+    console.log("adlevelValue", this.state.adlevelvalue);
+    if (!this.state.filtered) {
+      // console.log("enter inot filter condn", filters);
+      if (this.state.adlevelvalue != "") {
+        console.log("adlevelValue----", this.state.adlevelvalue);
+        filtercondition = {
+          levelPercent: {
+            op: this.state.adlevelOp,
+            v: this.state.adlevelvalue,
+          },
+        };
+      } else if (this.state.startDate != "" && this.state.endDate != "") {
+        filtercondition = [
+          {
+            timestamp: {
+              op: ">=",
+              v: this.state.startDate,
+            },
+          },
+          {
+            timestamp: {
+              op: "<=",
+              v: this.state.endDate,
+            },
+          },
+        ];
 
+        console.log("level Percent-----", filtercondition);
+      } else if (
+        this.state.levelGallonValue != "" &&
+        this.state.levelGallonOp != ""
+      ) {
+        filtercondition = {
+          levelGallons: {
+            op: this.state.levelGallonOp,
+            v: this.state.levelGallonValue,
+          },
+        };
+      }
+    }
+    this.setState({ filtercondition });
+
+    console.log("filter condtn", filtercondition);
+    if (
+      this.state.startDate != "" &&
+      this.state.endDate != "" &&
+      this.checkThreeMonthData()
+    ) {
+      this.props.updateParent(filtercondition);
+    }
+  };
+  checkThreeMonthData() {
+    // check if gap of start and end date is more than 3 months then retun true otherwise false
+    if (1 == 1) {
+      return true;
+    } else {
+      return false;
+    }
+  }
   updateFilter(type, value) {
     switch (type) {
       case "levelPercent":
@@ -393,6 +449,9 @@ class ClientHistoryTable extends Component {
     console.log("entryHistory", csvData);
   }
 
+  // passFilteredDatatoParent = () => {
+  //   let childFilterData = this.props.updateParent;
+  // };
   // handlePageChange = (activePage) => {
   //   this.setState({ activePage });
   // };
@@ -406,7 +465,6 @@ class ClientHistoryTable extends Component {
     const {
       searchText,
       searched,
-      exportVisibleDrawer,
       filtered,
       filters,
       showFilterBtn,
@@ -420,42 +478,10 @@ class ClientHistoryTable extends Component {
       activePage,
       docsCount,
       totalDocsCount,
+      filtercondition,
+
+      selectedTankId,
     } = this.state;
-    var filtercondition = {};
-    console.log("adlevelValue", this.state.adlevelvalue);
-
-    if (filtered) {
-      console.log("enter inot filter condn", filters);
-      if (this.state.adlevelvalue != "") {
-        filtercondition = {
-          levelPercent: {
-            op: this.state.adlevelOp,
-            v: this.state.adlevelvalue,
-          },
-        };
-      } else if (startDate != "" && endDate != "") {
-        filtercondition = {
-          timestamp: {
-            op: ">=",
-            v: startDate,
-          },
-          timestamp: {
-            op: "<=",
-            v: endDate,
-          },
-        };
-
-        console.log("level Percent-----", filtercondition);
-      } else if (levelGallonValue != "" && levelGallonOp != "") {
-        filtercondition = {
-          levelGallons: {
-            op: levelGallonOp,
-            v: levelGallonValue,
-          },
-        };
-      }
-    }
-    // render pagination
 
     console.log("Csv===", csvData);
     return (
@@ -467,7 +493,7 @@ class ClientHistoryTable extends Component {
             last: null,
             before: null,
             after: null,
-            filter: filtercondition,
+            filter: this.state.filtercondition,
             first: pagesize,
           }}
         >
@@ -510,7 +536,6 @@ class ClientHistoryTable extends Component {
                                 onChange={(value) =>
                                   this.updateFilter("levelPercent", value)
                                 }
-                                // value={this.state.filters.levelPercent}
                               >
                                 <Option value={"below10"}>Below 10%</Option>
                                 <Option value={"below30"}>Below 30%</Option>
@@ -521,14 +546,9 @@ class ClientHistoryTable extends Component {
                               <br />
                               <p>Select Date Range : </p>
                               <RangePicker
-                                // defaultValue={[
-                                //   moment("2020/01/01", dateFormat),
-                                //   moment("2020/01/01", dateFormat),
-                                // ]}
                                 onChange={(value) =>
                                   this.updateFilter("timestamp", value)
                                 }
-                                // format={dateFormat}
                               />
                               <br />
                               <br />
@@ -539,7 +559,6 @@ class ClientHistoryTable extends Component {
                                 onChange={(value) =>
                                   this.updateFilter("levelGallons", value)
                                 }
-                                // value={this.state.filters.levelPercent}
                               >
                                 <Option value={">="}>
                                   Greater than equal to
@@ -552,7 +571,6 @@ class ClientHistoryTable extends Component {
                               <input
                                 className="level_input"
                                 type="number"
-                                // defaultValue=
                                 value={levelGallonValue}
                                 placeholder="Enter check the value of level gallon below this"
                                 onChange={(e) =>
@@ -567,7 +585,6 @@ class ClientHistoryTable extends Component {
                               <Button
                                 style={{ width: "100%" }}
                                 type={filtered ? "danger" : "primary"}
-                                // icon={filtered ? "delete" : "filter"}
                                 onClick={
                                   filtered
                                     ? this.clearFilters

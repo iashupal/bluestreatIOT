@@ -32,11 +32,10 @@ const lineGraph = gql`
     }
   }
 `;
-
 var xAxisData = [];
 var yAxisData = [];
-var today = new Date();
-var todaysDate = new Date();
+var today = new Date("2020-05-18T19:36:49.000Z");
+var todaysDate = new Date("2020-05-18T19:36:49.000Z");
 var last30days = new Date(today.setDate(today.getDate() - 30));
 var firstday = new Date(today.getFullYear(), 0, 1); // XXXX/01/01
 var diff = Math.ceil((today - firstday) / 86400000);
@@ -159,8 +158,8 @@ function LineChart(props) {
   const { loading, error, data } = useQuery(lineGraph, {
     variables: {
       id: props.selectedTankId,
-      fromdate: last30days,
-      todate: todaysDate,
+      fromdate: todaysDate,
+      todate: last30days,
     },
   });
   if (loading || !data)
@@ -176,6 +175,7 @@ function LineChart(props) {
       yAxisData.push(item.node.levelPercent);
     });
   }
+  console.log("filtered date basis data", props.passFilteredData);
   console.log("xAxisData", xAxisData);
   console.log("yAxisData", yAxisData);
   console.log("selectedtankid", props.selectedTankId);

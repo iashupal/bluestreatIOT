@@ -5,82 +5,12 @@ import { DatePicker } from "antd";
 import moment from "moment";
 import { CSVLink } from "react-csv";
 import arrowLeft from "../../assets/images/arrow-left-blue.png";
-import print from "../../assets/images/print.png";
 import fileExport from "../../assets/images/file-export-white.png";
 import "./styles.css";
-import { gql } from "apollo-boost";
-import { Query } from "react-apollo";
-import Loader from "../Loader";
-import { objectEach } from "highcharts";
 const userId = localStorage.getItem("userId");
 const { RangePicker } = DatePicker;
 const dateFormat = "YYYY/MM/DD";
 
-const tankTable = gql`
-  query tankTableData(
-    $id: Int
-    $first: Int
-    $after: String
-    $filter: QueryFilterEntry
-  ) {
-    locationEntry(id: $id) {
-      tanks(
-        first: $first
-        recursive: true
-        after: $after
-        filter: [$filter]
-        sortDirection: asc
-        sortBy: levelPercent
-      ) {
-        totalCount
-        pageInfo {
-          endCursor
-          hasNextPage
-          hasPreviousPage
-          startCursor
-        }
-
-        edges {
-          cursor
-          node {
-            id
-            description
-            alarms {
-              alarmType
-              priority
-              alarming
-            }
-            sensor {
-              serialNumber
-              id
-              lastReportTimestamp
-            }
-            specifications {
-              capacityGallons
-              capacity
-              capacityUnits
-            }
-            latestReading {
-              gateway {
-                serialNumber
-                mostRecentTimestamp
-              }
-              refillPotentialGallons
-              levelPercent
-              rawQuality
-              levelGallons
-              temperatureCelsius
-              batteryVoltage
-              timestamp
-            }
-            externalId
-            typeTags
-          }
-        }
-      }
-    }
-  }
-`;
 class ExportDrawer extends Component {
   constructor(props) {
     super(props);
@@ -215,7 +145,7 @@ class ExportDrawer extends Component {
   }
 
   render() {
-    const { visible, hideForm, checked, tankData } = this.props;
+    const { visible, hideForm, tankData } = this.props;
     const { pageSize, checkBoxes } = this.state;
     console.log("tanksDataid -- ", this.props.tanksDataId);
     console.log("selectedCheckboxKeys -- ", this.props.selectedCheckboxKeys);
@@ -240,7 +170,7 @@ class ExportDrawer extends Component {
                 type="primary"
               >
                 Current Tanks in View(
-                {tankData ? tankData.totalCount : ""})
+                {tankData.edges?.length || ""})
               </Button>
               <Button onClick={hideForm} size="large" className="filter_btn">
                 Selected Tanks(
@@ -254,21 +184,23 @@ class ExportDrawer extends Component {
               heading="Tank Date Range to Export"
               contents={[
                 <div className="saved_searches">
-                  <Checkbox
+                  {/* <Checkbox
                     onChange={this.onChange}
                     name="timestamp"
                     value="timestamp"
                     checked={checkBoxes["timestamp"]}
-                  >
-                    <RangePicker
-
+                  > */}
+                  <RangePicker
                     // defaultValue={[
                     //   moment("2020/01/01", dateFormat),
                     //   moment("2020/01/01", dateFormat),
                     // ]}
                     // format={dateFormat}
-                    />
-                  </Checkbox>
+                    onChange={(moment, [from, to]) =>
+                      this.props.applyDateFilter(from, to)
+                    }
+                  />
+                  {/* </Checkbox> */}
                 </div>,
               ]}
             />
