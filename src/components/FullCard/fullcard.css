@@ -39,7 +39,7 @@
   grid-template-rows: 1fr;
   grid-template-columns: repeat(2, 1fr);
   /* grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); */
-  grid-gap: 20px;
+  grid-gap: 60px;
   padding-top: 20px;
 }
 .card_inr--divisn {

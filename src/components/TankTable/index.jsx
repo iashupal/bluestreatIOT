@@ -5,7 +5,7 @@ import ContentCard from "../ContentCard";
 import Badge from "../Badge";
 import ReactDragListView from "react-drag-listview";
 import Loader from "../../components/Loader";
-import ExportDrawer from "../ExportDrawer";
+import ExportDrawer from "../ExportDrawer/index11";
 import AdvancedSearchForm from "../AdvancedSearchForm";
 import arrowDownGrey from "../../assets/images/arrow-down-grey.png";
 import wifiBlue from "../../assets/images/wifi-blue.png";
@@ -773,7 +773,7 @@ class TankTable extends Component {
         <Query
           query={tankTable}
           variables={{
-            id: this.props.selectedTankId || this.props.tankId,
+            id: this.props.selectedTankId,
             after: null,
             before: null,
             filter: filtercondition,
@@ -916,6 +916,8 @@ class TankTable extends Component {
           selectedCheckboxKeys={selectedRowKeys}
           tanksDataId={this.props.selectedTankId}
           tankData={pageData}
+          tankFilteredData={filtercondition}
+
           // applyDateFilter={(from, to) => this.applyDateFilter(from, to)}
         />
       </div>

@@ -10,7 +10,84 @@ import "./styles.css";
 const userId = localStorage.getItem("userId");
 const { RangePicker } = DatePicker;
 const dateFormat = "YYYY/MM/DD";
+import { gql } from "apollo-boost";
+import { Query } from "react-apollo";
 
+const tankTable = gql`
+  query tankTableData(
+    $id: Int
+    $first: Int
+    $last: Int
+    $after: String
+    $filter: QueryFilterEntry
+    $before: String
+  ) {
+    locationEntry(id: $id) {
+      tanks(
+        first: $first
+        last: $last
+        recursive: true
+        after: $after
+        before: $before
+        filter: [$filter]
+        sortDirection: asc
+        sortBy: levelPercent
+      ) {
+        totalCount
+        pageInfo {
+          endCursor
+          hasNextPage
+          hasPreviousPage
+          startCursor
+        }
+        aggregate {
+          sum_allAlarmCnt
+          sum_hasHighAlarm
+          sum_hasMediumOrHigherAlarm
+          sum_highAlarmCnt
+          sum_mediumOrHigherAlarmCnt
+        }
+        edges {
+          cursor
+          node {
+            id
+            description
+            alarms {
+              alarmType
+              priority
+              alarming
+            }
+            sensor {
+              serialNumber
+              id
+              lastReportTimestamp
+            }
+            specifications {
+              capacityGallons
+              capacity
+              capacityUnits
+            }
+            latestReading {
+              gateway {
+                serialNumber
+                mostRecentTimestamp
+              }
+              refillPotentialGallons
+              levelPercent
+              rawQuality
+              levelGallons
+              temperatureCelsius
+              batteryVoltage
+              timestamp
+            }
+            externalId
+            typeTags
+          }
+        }
+      }
+    }
+  }
+`;
 class ExportDrawer extends Component {
   constructor(props) {
     super(props);
