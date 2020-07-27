@@ -76,6 +76,7 @@ class MainLayout extends Component {
       tab: "",
       subTab: "",
       formVisible: false,
+      tankId: "",
       selectid: userId,
       typename: "",
       description: "",
@@ -87,8 +88,23 @@ class MainLayout extends Component {
       adserchtxt: "",
       adlevelvalue: "",
       adlevelOp: "",
+      adAlert: "",
+      adSensor: "",
+      adTankSiveV: "",
+      adTankSiveOP: "",
+      selectedTab: false,
+      selectedSubTab: false,
+      selectedDeepSubTab: false,
+      selectedGatewayTab: false,
+      selectedGatewayTankTab: false,
+      advanceReset: false,
+      subChildId: "",
+      subTabId: "",
+      gatewayId: "",
+      gatewayTankId: "",
       adCommodityValue: "Propane",
       collapsed: false,
+      filterTableFromGraph: "",
     };
     this.changeFullTab = this.changeFullTab.bind(this);
     this.changeHalfTab = this.changeHalfTab.bind(this);
@@ -106,34 +122,49 @@ class MainLayout extends Component {
     //console.log("testing state",this.state.advanceSerachValue);
   }
 
-  onSearchingAdvance(valueadvance, tagValue) {
+  onSearchingAdvance(
+    valueadvance,
+    tankStatus,
+    alert,
+    sensor,
+    tankSizeV,
+    tankSizeO
+  ) {
     var op = "",
       value = "";
-    if (tagValue === "Below 10%") {
+    if (tankStatus === "Below 10%") {
       op = "<";
       value = "0.10";
-    } else if (tagValue === "Below 30%") {
+    } else if (tankStatus === "Below 30%") {
       op = "<";
       value = "0.30";
-    } else if (tagValue === "Below 30% to 80%") {
+    } else if (tankStatus === "30% to 80%") {
       op = "<";
       value = "0.80";
-    } else if (tagValue === "Above 80%") {
+    } else if (tankStatus === "Above 80%") {
       op = ">";
       value = "0.80";
     }
+
     this.setState(
       {
+        advanceReset: false,
         formVisible: false,
         adserchtxt: valueadvance,
         adlevelvalue: value,
         adlevelOp: op,
+        adAlert: alert,
+        adSensor: sensor,
+        adTankSiveV: tankSizeV,
+        adTankSiveOP: tankSizeO,
       },
+
       function () {
         console.log("function state", this.state.adserchtxt);
       }
     );
-    console.log("tag state", tagValue);
+    //console.log("anjali", tagValue2)
+    //console.log("tag alert", this.state.adlevelOp);
   }
   changeFullTab() {
     this.setState({ wholeCard: true });
@@ -146,71 +177,150 @@ class MainLayout extends Component {
     this.setState({ searchValue: searchtext });
   }
 
-  changeTab = (tab, id, desc, typename) => {
+  changeTab = (tab, id, desc, typename, tabDeselectCondition) => {
     localStorage.setItem("userId", id);
+    this.state.subChildId = id;
+    if (tabDeselectCondition === true) {
+      tab = "";
+      id = userId;
+    }
+
     this.setState({
+      advanceReset: true,
       tab,
       selectid: id,
       description: desc,
       typename: typename,
+      subtab: "",
+      deepsubtab: "",
+      gatewaytab: "",
+      gatewaytanktab: "",
       adserchtxt: "",
       adlevelvalue: "",
       adlevelOp: "",
+      adAlert: "",
+      adSensor: "",
+      adTankSiveV: "",
+      adTankSiveOP: "",
       subDescription: "",
       deepSubTabDesc: "",
       gatewayTabDesc: "",
       gatewayTankTabDesc: "",
+      selectedTab: !tabDeselectCondition,
     });
     console.log("typename", typename);
     console.log("description", desc);
     console.log("userid1", id);
   };
 
-  changeSubTabs = (subtab, id, subDesc, typename) => {
+  changeSubTabs = (subtab, id, subDesc, typename, subtabDeselectCondition) => {
+    this.state.subTabId = id;
+    if (subtabDeselectCondition === true && this.state.selectid == id) {
+      subtab = "";
+      id = this.state.subChildId;
+    }
+    console.log("aaaaaaaaaaaaaaaaaa", this.state.selectid, id);
     this.setState({
+      advanceReset: true,
       subtab,
       selectid: id,
       subDescription: subDesc,
       typename: typename,
+      deepsubtab: "",
+      gatewaytab: "",
+      gatewaytanktab: "",
       adserchtxt: "",
       adlevelvalue: "",
       adlevelOp: "",
+      adAlert: "",
+      adSensor: "",
+      adTankSiveV: "",
+      adTankSiveOP: "",
       deepSubTabDesc: "",
       gatewayTabDesc: "",
       gatewayTankTabDesc: "",
+      selectedSubTab: !subtabDeselectCondition,
     });
     console.log("typename", typename);
     console.log("subDescription", subDesc);
   };
 
-  changeDeepSubTabs = (deepsubtab, id, deepsubDesc, typename) => {
+  changeDeepSubTabs = (
+    deepsubtab,
+    id,
+    deepsubDesc,
+    typename,
+    deepsubTabDeselectCondition
+  ) => {
+    this.state.gatewayId = id;
+    if (deepsubTabDeselectCondition === true && this.state.selectid == id) {
+      deepsubtab = "";
+      id = this.state.subTabId;
+    }
     this.setState({
+      advanceReset: true,
       deepsubtab,
       selectid: id,
       deepSubTabDesc: deepsubDesc,
       typename: typename,
+      gatewaytab: "",
+      gatewaytanktab: "",
       adserchtxt: "",
       adlevelvalue: "",
       adlevelOp: "",
+      adAlert: "",
+      adSensor: "",
+      adTankSiveV: "",
+      adTankSiveOP: "",
       gatewayTabDesc: "",
       gatewayTankTabDesc: "",
+      selectedDeepSubTab: !deepsubTabDeselectCondition,
     });
     console.log("deepSubTabDesc", deepsubDesc);
   };
-  changeGatewayTab = (gatewaytab, id, gatewayDesc, typename) => {
+  changeGatewayTab = (
+    gatewaytab,
+    id,
+    gatewayDesc,
+    typename,
+    gatewayTabDeselectCondition
+  ) => {
+    this.state.gatewayTankId = id;
+    if (gatewayTabDeselectCondition === true && this.state.selectid == id) {
+      gatewaytab = "";
+      id = this.state.gatewayId;
+    }
     this.setState({
+      advanceReset: true,
       gatewaytab,
       selectid: id,
       gatewayTabDesc: gatewayDesc,
       typename: typename,
+      gatewaytanktab: "",
       adserchtxt: "",
       adlevelvalue: "",
       adlevelOp: "",
+      adAlert: "",
+      adSensor: "",
+      adTankSiveV: "",
+      adTankSiveOP: "",
       gatewayTankTabDesc: "",
+      selectedGatewayTab: !gatewayTabDeselectCondition,
     });
   };
-  changeGatewayTankTab = (gatewaytanktab, id, gatewaytankDesc, typename) => {
+  changeGatewayTankTab = (
+    gatewaytanktab,
+    id,
+    gatewaytankDesc,
+    typename,
+    gatewayTankTabDeselectCondition
+  ) => {
+    if (gatewayTankTabDeselectCondition === true && this.state.selectid == id) {
+      gatewaytanktab = "";
+      id = this.state.gatewayTankId;
+    }
     this.setState({
+      advanceReset: true,
       gatewaytanktab,
       selectid: id,
       gatewayTankTabDesc: gatewaytankDesc,
@@ -218,6 +328,11 @@ class MainLayout extends Component {
       adserchtxt: "",
       adlevelvalue: "",
       adlevelOp: "",
+      adAlert: "",
+      adSensor: "",
+      adTankSiveV: "",
+      adTankSiveOP: "",
+      selectedGatewayTankTab: !gatewayTankTabDeselectCondition,
     });
   };
   showForm() {
@@ -232,6 +347,14 @@ class MainLayout extends Component {
     });
   }
 
+  handleGraphicClick = () => {
+    console.log("tank id------------------------", tankId);
+    this.setState((tankId = this.state.tankId));
+  };
+  // handleGraphFilter = (tankId) => {
+  //   this.setState({ filterTableFromGraph: tankId });
+  //   console.log("filterTable from graph", this.state.filterTableFromGraph);
+  // };
   render() {
     let { data } = this.props;
     var filterdata = [];
@@ -281,6 +404,13 @@ class MainLayout extends Component {
       gatewayTankTabDesc,
       collapsed,
       typename,
+      adAlert,
+      selectedTab,
+      selectedSubTab,
+      selectedDeepSubTab,
+      selectedGatewayTab,
+      selectedGatewayTankTab,
+      tankId,
     } = this.state;
     let button;
     if (wholeCard) {
@@ -305,6 +435,7 @@ class MainLayout extends Component {
             wholeCard={wholeCard}
             selectedTankId={this.state.selectid ? this.state.selectid : ""}
             selectedTypename={typename}
+            // callback={this.handleGraphicClick}
           />
           {button}
         </div>
@@ -337,13 +468,15 @@ class MainLayout extends Component {
                       {filterdata.map((item) => (
                         <div>
                           <Tab
+                            id="tab1"
                             text={item.node.description}
                             onClick={() =>
                               this.changeTab(
                                 item.node.id,
                                 item.node.id,
                                 item.node.description,
-                                item.node.__typename
+                                item.node.__typename,
+                                selectedTab
                               )
                             }
                             selected={tab === item.node.id}
@@ -374,18 +507,6 @@ class MainLayout extends Component {
                                         <div className="tab_content">
                                           {item.node.__typename ===
                                           "GatewayLocation" ? (
-                                            // <div
-                                            //   className="leftGateway_desc"
-                                            //   // onClick={() =>
-                                            //   //   this.changeGateways(
-                                            //   //     item.node.id,
-                                            //   //     item.node.description
-                                            //   //   )
-                                            //   // }
-
-                                            // >
-                                            //   {item.node.description}
-                                            // </div>
                                             <SubTabs
                                               text={item.node.description}
                                               styleName="tab_branch"
@@ -394,7 +515,8 @@ class MainLayout extends Component {
                                                   item.node.id,
                                                   item.node.id,
                                                   item.node.description,
-                                                  item.node.__typename
+                                                  item.node.__typename,
+                                                  selectedSubTab
                                                 )
                                               }
                                               selected={subtab === item.node.id}
@@ -408,7 +530,8 @@ class MainLayout extends Component {
                                                   item.node.id,
                                                   item.node.id,
                                                   item.node.description,
-                                                  item.node.__typename
+                                                  item.node.__typename,
+                                                  selectedSubTab
                                                 )
                                               }
                                               selected={subtab === item.node.id}
@@ -460,7 +583,8 @@ class MainLayout extends Component {
                                                                   item.node
                                                                     .description,
                                                                   item.node
-                                                                    .__typename
+                                                                    .__typename,
+                                                                  selectedDeepSubTab
                                                                 )
                                                               }
                                                               selected={
@@ -481,7 +605,8 @@ class MainLayout extends Component {
                                                                   item.node
                                                                     .description,
                                                                   item.node
-                                                                    .__typename
+                                                                    .__typename,
+                                                                  selectedDeepSubTab
                                                                 )
                                                               }
                                                               selected={
@@ -565,7 +690,8 @@ class MainLayout extends Component {
                                                                                     .description,
                                                                                   item
                                                                                     .node
-                                                                                    .__typename
+                                                                                    .__typename,
+                                                                                  selectedGatewayTab
                                                                                 )
                                                                               }
                                                                               selected={
@@ -595,7 +721,8 @@ class MainLayout extends Component {
                                                                                     .description,
                                                                                   item
                                                                                     .node
-                                                                                    .__typename
+                                                                                    .__typename,
+                                                                                  selectedGatewayTab
                                                                                 )
                                                                               }
                                                                               selected={
@@ -678,7 +805,8 @@ class MainLayout extends Component {
                                                                                                   .description,
                                                                                                 item
                                                                                                   .node
-                                                                                                  .__typename
+                                                                                                  .__typename,
+                                                                                                selectedGatewayTankTab
                                                                                               )
                                                                                             }
                                                                                             selected={
@@ -821,7 +949,12 @@ class MainLayout extends Component {
                   adSearchValue={this.state.adserchtxt}
                   adLevelValue={this.state.adlevelvalue}
                   adLevelOP={this.state.adlevelOp}
+                  adAlert={this.state.adAlert}
+                  adSensor={this.state.adSensor}
+                  adTankSiveV={this.state.adTankSiveV}
+                  adTankSiveOP={this.state.adTankSiveOP}
                   adCommodityValue={this.state.adCommodityValue}
+                  // callback={tankId}
                 />
               </div>
             </Content>
@@ -835,6 +968,7 @@ class MainLayout extends Component {
           entry={entry}
           fetchSerachValue={this.onSearchingAdvance}
           initialvalue={this.state.adserchtxt}
+          advanceReset={this.state.advanceReset}
           SavingAdvanceSearch={this.onsavingAdvanceSearch}
         />
       </Fragment>

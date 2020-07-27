@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import React, { Fragment, useCallback, useState } from "react";
 import Heading from "../Heading";
 import ContentCard from "../ContentCard";
 import dropGreen from "../../assets/images/drop-green.png";
@@ -154,7 +154,14 @@ let totalGraphs = gql`
     }
   }
 `;
-function FullCard({ selectedTank, selectedTypeGateway }) {
+function FullCard({
+  selectedTank,
+  selectedTypeGateway,
+  fetchGraphValue,
+  // handleGraphClick,
+  props,
+}) {
+  const [tankCount] = useState("");
   const tankId = selectedTank;
   let finalGraph;
   const selectedGateway = selectedTypeGateway;
@@ -172,7 +179,7 @@ function FullCard({ selectedTank, selectedTypeGateway }) {
   } = useQuery(finalGraph, {
     variables: { id: tankId },
   });
-  
+
   if (loadingGraphs || !graphsData)
     return (
       <p>
@@ -183,7 +190,16 @@ function FullCard({ selectedTank, selectedTypeGateway }) {
   console.log("tank", graphsData.locationEntry);
   console.log("offlineGateway", graphsData.locationEntry.offlineGateways);
   if (errorGraphs) return console.log("Failed to fetch");
-
+  const handleGraphClick = () => {
+    console.log(tankId);
+  };
+  // const handleGraphClick = useCallback(fetchGraphValue(tankCount));
+  // const handleGraphClick = (tankId) => {
+  //   console.log("tank id", tankId);
+  //   props.handleGraphFilter(tankId);
+  //   console.log(tankId);
+  // };
+  // const handleGraphClick = useCallback(setTankId("yes"));
   return (
     <div>
       <Fragment>
@@ -223,6 +239,10 @@ function FullCard({ selectedTank, selectedTypeGateway }) {
                     easingFunction={easeQuadInOut}
                     image={dropGreen}
                     percntgStatus="above 30%"
+                    // onClick={() => {
+                    //   handleGraphClick(tankId);
+                    // }}
+                    onClick={handleGraphClick}
                   />
                   <AnimatedTank
                     graphStyle
@@ -239,6 +259,7 @@ function FullCard({ selectedTank, selectedTypeGateway }) {
                     easingFunction={easeQuadInOut}
                     image={dropYellow}
                     percntgStatus="below 30%"
+                    // onClick={this.handleClick}
                   />
                   <AnimatedTank
                     graphStyle
@@ -255,6 +276,7 @@ function FullCard({ selectedTank, selectedTypeGateway }) {
                     easingFunction={easeQuadInOut}
                     image={dropRed}
                     percntgStatus="below 10%"
+                    // onClick={this.handleClick}
                   />
                 </div>
               </div>,

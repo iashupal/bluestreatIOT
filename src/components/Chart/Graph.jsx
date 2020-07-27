@@ -4,7 +4,7 @@ import "react-circular-progressbar/dist/styles.css";
 import "./styles.css";
 
 function Graph(props) {
-  const { children, graphStyle, ...otherProps } = props;
+  const { children, graphStyle, onClick, ...otherProps } = props;
   return (
     <div className={`progressBar_graph ${props.graphStyle}`}>
       <div>
@@ -14,7 +14,9 @@ function Graph(props) {
           className={`graphStroke ${props.mainStrokeStyle}`}
         />
       </div>
-      <div className="progressbar_inr--info">{props.children}</div>
+      <div className="progressbar_inr--info" onClick={props.onClick}>
+        {props.children}
+      </div>
     </div>
   );
 }

@@ -269,9 +269,12 @@ class TankTable extends Component {
         {
           title: (text) => (
             <Query
-              query={tankAlerts}
+              query={tankTable}
               variables={{
                 id: this.props.selectedTankId,
+                after: null,
+                before: null,
+                filter: this.state.filtercondition,
               }}
             >
               {({ data, error, loading }) => {
@@ -535,7 +538,7 @@ class TankTable extends Component {
                   </ul>
                 </div>
               }
-              trigger="click"
+              // trigger="click"
             >
               <img
                 style={{ width: 5, cursor: "pointer" }}
@@ -567,6 +570,7 @@ class TankTable extends Component {
     };
   }
 
+  loadMoreButton(count) {}
   componentDidMount() {
     this.updateFiltersFromProps();
   }
@@ -577,6 +581,11 @@ class TankTable extends Component {
       adCommodityValue: prevProps.adCommodityValue,
       adLevelValue: prevProps.adLevelValue,
       adLevelOP: prevProps.adLevelOP,
+      adAlert: prevProps.adAlert,
+      adSensor: prevProps.adSensor,
+      adTankSiveV: prevProps.adTankSiveV,
+      adTankSiveOP: prevProps.adTankSiveOP,
+      filterTableFromGraph: prevProps.filterTableFromGraph,
     };
 
     const currentPropsValues = {
@@ -584,6 +593,11 @@ class TankTable extends Component {
       adCommodityValue: this.props.adCommodityValue,
       adLevelValue: this.props.adLevelValue,
       adLevelOP: this.props.adLevelOP,
+      adAlert: this.props.adAlert,
+      adSensor: this.props.adSensor,
+      adTankSiveV: this.props.adTankSiveV,
+      adTankSiveOP: this.props.adTankSiveOP,
+      filterTableFromGraph: this.props.filterTableFromGraph,
     };
 
     if (!lodash.isEqual(prevPropsValues, currentPropsValues)) {
@@ -592,97 +606,55 @@ class TankTable extends Component {
   }
 
   updateFiltersFromProps = () => {
-    var filtercondition = "";
-    if (
-      this.props.adSearchValue != "" &&
-      this.props.adCommodityValue != "" &&
-      this.props.adLevelValue != ""
-    ) {
+    var filtercondition = [];
+    if (this.props.adSearchValue != "")
+      filtercondition.push({
+        description: { op: "match", v: this.props.adSearchValue },
+      });
+
+    if (this.props.adLevelValue != "") {
       if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<") {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              commodity: { op: "=", v: this.props.adCommodityValue },
-              levelPercent: { op: ">", v: ".30" },
-            }
-          : "";
-      } else {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              commodity: { op: "=", v: this.props.adCommodityValue },
-            }
-          : "";
-      }
-    } else if (
-      this.props.adSearchValue != "" &&
-      this.props.adLevelValue != ""
-    ) {
-      if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<") {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              levelPercent: { op: ">", v: ".30" },
-            }
-          : "";
-      } else {
-        filtercondition = this.props.adSearchValue
-          ? {
-              description: { op: "match", v: this.props.adSearchValue },
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-            }
-          : "";
-      }
+        filtercondition.push({
+          levelPercent: {
+            op: this.props.adLevelOP,
+            v: this.props.adLevelValue,
+          },
+          levelPercent: { op: ">", v: ".30" },
+        });
+      } else
+        filtercondition.push({
+          levelPercent: {
+            op: this.props.adLevelOP,
+            v: this.props.adLevelValue,
+          },
+        });
     }
-    //Condition for level only
-    else if (this.props.adLevelValue != "" && this.props.adLevelOP != "") {
-      if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<") {
-        console.log("Beleo 30 t0 80");
-        filtercondition = this.props.adLevelValue
-          ? {
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-              levelPercent: { op: ">", v: ".30" },
-            }
-          : "";
-      } else {
-        filtercondition = this.props.adLevelValue
-          ? {
-              levelPercent: {
-                op: this.props.adLevelOP,
-                v: this.props.adLevelValue,
-              },
-            }
-          : "";
-      }
+
+    if (this.props.adAlert == "High") {
+      filtercondition.push({ highAlarmCnt: { op: ">", v: 0 } });
     }
-    //Only searching for description
-    else if (this.props.adSearchValue != "") {
-      console.log("only description searching");
-      filtercondition = this.props.adSearchValue
-        ? { description: { op: "match", v: this.props.adSearchValue } }
-        : "";
-    } else {
-      console.log("without filter");
-      filtercondition = "";
+    if (this.props.adAlert == "Medium") {
+      filtercondition.push({ mediumAlarmCnt: { op: ">", v: 0 } });
     }
+    if (this.props.adSensor == "Online") {
+      filtercondition.push({
+        alarmingTypes: { op: "in", v: "sensorMissedReportsAlarm" },
+      });
+    }
+    if (this.props.adSensor == "Offline") {
+      filtercondition.push({
+        alarmingTypes: { op: "not in", v: "sensorMissedReportsAlarm" },
+      });
+    }
+    if (this.props.adTankSiveV != "" && this.props.adTankSiveOP != "")
+      filtercondition.push({
+        capacityGallons: {
+          op: this.props.adTankSiveOP,
+          v: this.props.adTankSiveV,
+        },
+      });
+
+    console.log("this.props.adAler", filtercondition);
 
     this.setState({ filtercondition });
   };
@@ -715,19 +687,32 @@ class TankTable extends Component {
       exportVisibleDrawer: false,
     });
   }
+  // applyDateFilter = (from, to) => {
+  //   let filters = [...this.state.filtercondition];
+  //   if (from && to) {
+  //     filters = [
+  //       {
+  //         timestamp: { op: ">=", v: new Date(from).toISOString() },
+  //       },
+  //       {
+  //         timestamp: { op: "<=", v: new Date(to).toISOString() },
+  //       },
+  //     ];
 
-  applyDateFilter = (from, to) => {
-    const filters = { ...this.state.filtercondition };
-    if (from && to) {
-      Object.assign(filters, {
-        timestamp: { op: ">=", v: new Date(from).toISOString() },
-        timestamp: { op: "<=", v: new Date(to).toISOString() },
-      });
-    } else {
-      delete filters.timestamp;
-    }
-    this.setState({ filtercondition: { ...filters }, filteredByDate: true });
-  };
+  //     // Object.assign(filters, {
+  //     //   timestamp: { op: ">=", v: new Date(from).toISOString() },
+  //     //   timestamp: { op: "<=", v: new Date(to).toISOString() },
+  //     // });
+  //   } else {
+  //     delete filters.splice(0, 1);
+  //   }
+  //   this.setState({
+  //     filtercondition: filters,
+  //     filteredByDate: true,
+  //     selectedRowKeys: 0,
+  //   });
+  //   console.log("filterby date", filters);
+  // };
 
   onSelectChange = (selectedRowKeys) => {
     if (selectedRowKeys.length > 1) {
@@ -774,13 +759,21 @@ class TankTable extends Component {
       hideDefaultSelections: true,
       type: "checkbox",
     };
+    console.log("anjaliaaaa", data.locationEntry);
+    //const renderAuthrrButton = () => {
+    //    if (data.locationEntry.tanks.totalCount > data.locationEntry.tanks.edges.length) {
+    //        return <button>Logout</button>
+    //    } else {
+    //        return <button>Login</button>
+    //    }
+    //}
 
     return (
       <div className="tank_table">
         <Query
           query={tankTable}
           variables={{
-            id: this.props.selectedTankId,
+            id: this.props.selectedTankId || this.props.tankId,
             after: null,
             before: null,
             filter: filtercondition,
@@ -837,46 +830,53 @@ class TankTable extends Component {
                         pagination={true}
                       />
                       <div style={{ textAlign: "center" }}>
-                        <Button
-                          type="primary"
-                          size="medium"
-                          className="tank__loadmore"
-                          onClick={() => {
-                            const {
-                              endCursor,
-                            } = data.locationEntry.tanks.pageInfo;
-                            console.log(endCursor);
-                            fetchMore({
-                              variables: { after: endCursor },
-                              updateQuery: (
-                                prevResult,
-                                { fetchMoreResult }
-                              ) => {
-                                console.log("prevResult", prevResult);
-                                console.log("fetchMoreResult", fetchMoreResult);
-                                fetchMoreResult.locationEntry.tanks.edges = [
-                                  ...prevResult.locationEntry.tanks.edges,
-                                  ...fetchMoreResult.locationEntry.tanks.edges,
-                                ];
-                                this.setState({
-                                  pageData: {
-                                    ...pageData,
-                                    edges: [
-                                      ...fetchMoreResult.locationEntry.tanks
-                                        .edges,
-                                    ],
-                                  },
-                                });
-                                // if (!fetchMoreResult)
-                                //   return [...prevResult, ...fetchMoreResult];
-                                // return fetchMoreResult;
-                                return fetchMoreResult;
-                              },
-                            });
-                          }}
-                        >
-                          Load more..
-                        </Button>
+                        {data.locationEntry.tanks.totalCount >
+                          data.locationEntry.tanks.edges.length && (
+                          <Button
+                            type="primary"
+                            size="medium"
+                            className="tank__loadmore"
+                            onClick={() => {
+                              const {
+                                endCursor,
+                              } = data.locationEntry.tanks.pageInfo;
+                              console.log(endCursor);
+                              fetchMore({
+                                variables: { after: endCursor },
+                                updateQuery: (
+                                  prevResult,
+                                  { fetchMoreResult }
+                                ) => {
+                                  console.log("prevResult", prevResult);
+                                  console.log(
+                                    "fetchMoreResult",
+                                    fetchMoreResult
+                                  );
+                                  fetchMoreResult.locationEntry.tanks.edges = [
+                                    ...prevResult.locationEntry.tanks.edges,
+                                    ...fetchMoreResult.locationEntry.tanks
+                                      .edges,
+                                  ];
+                                  this.setState({
+                                    pageData: {
+                                      ...pageData,
+                                      edges: [
+                                        ...fetchMoreResult.locationEntry.tanks
+                                          .edges,
+                                      ],
+                                    },
+                                  });
+                                  // if (!fetchMoreResult)
+                                  //   return [...prevResult, ...fetchMoreResult];
+                                  // return fetchMoreResult;
+                                  return fetchMoreResult;
+                                },
+                              });
+                            }}
+                          >
+                            Load more..
+                          </Button>
+                        )}
                       </div>
                     </ReactDragListView.DragColumn>
 
@@ -916,7 +916,7 @@ class TankTable extends Component {
           selectedCheckboxKeys={selectedRowKeys}
           tanksDataId={this.props.selectedTankId}
           tankData={pageData}
-          applyDateFilter={(from, to) => this.applyDateFilter(from, to)}
+          // applyDateFilter={(from, to) => this.applyDateFilter(from, to)}
         />
       </div>
     );

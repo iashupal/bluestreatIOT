@@ -23,6 +23,7 @@ class AnimatedTank extends React.Component {
       graphStyle,
       graphDesignStyle,
       strokeColor,
+      onClick,
     } = this.props;
     const { isAnimated } = this.state;
     return (
@@ -47,6 +48,7 @@ class AnimatedTank extends React.Component {
                 <Graph
                   percentage={roundedPercentage}
                   mainStrokeStyle={strokeColor}
+                  onClick={onClick}
                 >
                   <div className="graph_content">
                     <div className="graph_value">
@@ -66,7 +68,11 @@ class AnimatedTank extends React.Component {
                   </div>
                 </Graph>
               ) : !graphDesignStyle ? (
-                <Graph percentage={roundedPercentage} graphStyle="graphStyle">
+                <Graph
+                  percentage={roundedPercentage}
+                  graphStyle="graphStyle"
+                  onClick={onClick}
+                >
                   <div className="graph_content">
                     <div className="graph_value">
                       <img src={image} alt="logo" />
@@ -90,6 +96,7 @@ class AnimatedTank extends React.Component {
                 <Graph
                   percentage={roundedPercentage}
                   graphStyle="graphDesignStyle"
+                  onClick={onClick}
                 >
                   <div className="graph_content">
                     <h3>

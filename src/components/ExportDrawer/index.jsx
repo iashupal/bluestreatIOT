@@ -16,50 +16,67 @@ class ExportDrawer extends Component {
     super(props);
     this.state = {
       visible: false,
-      checked: false,
+      filtered: false,
+      checked: true,
       csvHeader: [],
       csvData: [],
       tankHistory: [],
       tanksDataId: this.props.tanksDataId,
       pageSize: 10,
       currentPage: 1,
+      showFilterBtn: true,
       checkBoxes: {
-        "Tank Number": false,
-        "Tank Name": false,
-        "Tank Status": false,
-        "Sensor Status": false,
-        Alerts: false,
-        Commodity: false,
-        "Current Volume": false,
-        "Refill Potential": false,
-        "Tank Capacity": false,
-        Temperature: false,
-        Battery: false,
-        timestamp: false,
+        "Tank Number": true,
+        "Tank Name": true,
+        "Tank Status": true,
+        "Sensor Status": true,
+        Alerts: true,
+        Commodity: true,
+        "Current Volume": true,
+        "Refill Potential": true,
+        "Tank Capacity": true,
+        Temperature: true,
+        Battery: true,
       },
     };
     this.setCSV = this.setCSV.bind(this);
   }
   onChange = ({ target: { value } }) => {
     const { checkBoxes } = this.state;
+
     this.setState(
-      { checkBoxes: { ...checkBoxes, [value]: !checkBoxes[value] } },
+      {
+        checkBoxes: { ...checkBoxes, [value]: !checkBoxes[value] },
+        showFilterBtn: true,
+      },
       () => this.setCSV()
     );
   };
+
   changeAll = ({ target: { checked } }) => {
     const { checkBoxes } = this.state;
     const updates = {};
-    Object.keys(checkBoxes).forEach(
-      (checkBox) => (updates[checkBox] = checked)
-    );
-    this.setState({ checkBoxes: { ...updates } }, () => this.setCSV());
+    if (checked === true) {
+      Object.keys(checkBoxes).forEach(
+        (checkBox) => (updates[checkBox] = checked)
+      );
+      this.setState({ checkBoxes: { ...updates }, showFilterBtn: true }, () =>
+        this.setCSV()
+      );
+    } else {
+      Object.keys(checkBoxes).forEach(
+        (checkBox) => (updates[checkBox] = false)
+      );
+      this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
+    }
   };
+
   clearCheckBoxes = () => {
+    console.log("clearall");
     const { checkBoxes } = this.state;
     const updates = {};
     Object.keys(checkBoxes).forEach((checkBox) => (updates[checkBox] = false));
-    this.setState({ checkBoxes: { ...updates } });
+    this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
   };
   setCSV() {
     console.log("setCSV");
@@ -82,15 +99,11 @@ class ExportDrawer extends Component {
         });
 
       const fullData = {
-        "Tank Number": item.node.externalId ? item.node.externalId : "",
+        "Tank Number": item.node.externalId ? item.node.externalId : 0,
         "Tank Name": item.node.description ? item.node.description : "",
         "Tank Status": item.node.latestReading
           ? item.node.latestReading.levelPercent != null
-            ? item.node.latestReading.levelPercent *
-              100 *
-              (item.node.specifications
-                ? item.node.specifications.capacityGallons / 100
-                : 0)
+            ? item.node.latestReading.levelPercent * 100
             : 0
           : 0,
         "Sensor Status":
@@ -101,15 +114,15 @@ class ExportDrawer extends Component {
         Alerts: `High - ${alarmValues.high} & Medium - ${alarmValues.medium}`,
         Commodity: "Propane",
         "Current Volume": item.node.latestReading
-          ? item.node.latestReading === null
-            ? item.node.latestReading.levelPercent != null
-              ? item.node.latestReading.levelPercent *
+          ? item.node.latestReading.levelPercent != null
+            ? item.node.latestReading.levelPercent *
                 100 *
                 (item.node.specifications
                   ? item.node.specifications.capacityGallons / 100
-                  : 0)
-              : 0
-            : "0"
+                  : 0) +
+              " " +
+              "G"
+            : 0 + "G"
           : "0",
         "Refill Potential": item.node.latestReading
           ? item.node.latestReading.refillPotentialGallons
@@ -146,7 +159,7 @@ class ExportDrawer extends Component {
 
   render() {
     const { visible, hideForm, tankData } = this.props;
-    const { pageSize, checkBoxes } = this.state;
+    const { pageSize, checkBoxes, filtered, showFilterBtn } = this.state;
     console.log("tanksDataid -- ", this.props.tanksDataId);
     console.log("selectedCheckboxKeys -- ", this.props.selectedCheckboxKeys);
     console.log("selectedRowKeys", this.props.selectedCheckboxKeys);
@@ -172,7 +185,7 @@ class ExportDrawer extends Component {
                 Current Tanks in View(
                 {tankData.edges?.length || ""})
               </Button>
-              <Button onClick={hideForm} size="large" className="filter_btn">
+              <Button size="large" className="filter_btn">
                 Selected Tanks(
                 {this.props.selectedCheckboxKeys
                   ? this.props.selectedCheckboxKeys.length
@@ -180,30 +193,19 @@ class ExportDrawer extends Component {
                 )
               </Button>
             </div>
-            <SaveCard
+            {/* <SaveCard
               heading="Tank Date Range to Export"
               contents={[
                 <div className="saved_searches">
-                  {/* <Checkbox
-                    onChange={this.onChange}
-                    name="timestamp"
-                    value="timestamp"
-                    checked={checkBoxes["timestamp"]}
-                  > */}
                   <RangePicker
-                    // defaultValue={[
-                    //   moment("2020/01/01", dateFormat),
-                    //   moment("2020/01/01", dateFormat),
-                    // ]}
-                    // format={dateFormat}
-                    onChange={(moment, [from, to]) =>
-                      this.props.applyDateFilter(from, to)
+                  
+                    onChange={(moment, [from, to], showFilterBtn) =>
+                      this.props.applyDateFilter(from, to, showFilterBtn)
                     }
                   />
-                  {/* </Checkbox> */}
                 </div>,
               ]}
-            />
+            /> */}
             <SaveCard
               heading="Tank Data to Export"
               contents={[
@@ -381,16 +383,19 @@ class ExportDrawer extends Component {
               }}
             >
               <CSVLink
+                // disabled={showFilterBtn}
                 data={this.state.csvData}
-                filename={`tanksRecord-${moment(new Date()).toISOString()}.csv`}
+                filename={`Tanks_List-${moment(new Date()).toISOString()}.csv`}
               >
                 <Button
                   size="large"
+                  // disabled={showFilterBtn}
                   className="client_export--btn"
                   icon={<img className="icons" src={fileExport} alt="export" />}
-                  type="primary"
+                  // disabled={Object.keys(filters).length === 0}
+                  type={filtered ? "danger" : "primary"}
                 >
-                  Export
+                  {filtered ? "Clear Export" : "Export"}
                 </Button>
               </CSVLink>
             </div>

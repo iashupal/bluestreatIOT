@@ -105,14 +105,14 @@ import { ApolloProvider } from "react-apollo";
 import Amplify from "aws-amplify";
 import AuthRoutes from "./routers/AuthRoutes";
 const amplifyConfig = {
-  region: "us-west-2",
+  region: process.env.REACT_APP_AWS_REGION || "us-west-2",
   Analytics: {
     // OPTIONAL - disable Analytics if true
     disabled: true,
   },
   Auth: {
-    userPoolId: "us-west-2_wtUQhInp3",
-    userPoolWebClientId: "5fqur9aivpak9bo3k7bq5ol6pe",
+    userPoolId: process.env.REACT_APP_USER_POOL_ID || "us-west-2_wtUQhInp3",
+    userPoolWebClientId: process.env.REACT_APP_WEB_CLIENT_ID || "5fqur9aivpak9bo3k7bq5ol6pe",
   },
   // Auth: {
   //   UserPoolId: "us-east-1_flvAAhvx4",
@@ -121,7 +121,7 @@ const amplifyConfig = {
 };
 
 Amplify.configure(amplifyConfig);
-const GQL_ENDPOINT =
+const GQL_ENDPOINT = process.env.REACT_APP_GQL_ENDPOINT || 
   "https://khoz9u3frf.execute-api.us-west-2.amazonaws.com/stage/graphql";
 
 const cache = new InMemoryCache();

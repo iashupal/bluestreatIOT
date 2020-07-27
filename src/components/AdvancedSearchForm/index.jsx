@@ -32,7 +32,8 @@ class AdvancedSearchForm extends Component {
     this.state = {
       visible: false,
       tagVisible: false,
-      tagVisible1: false,
+        tagVisible1: false,
+        advanceReset:false,
       events: {},
       file: null,
       advancedTab: 0,
@@ -42,10 +43,25 @@ class AdvancedSearchForm extends Component {
       tagValue2: "",
       tagValue3: "",
       tagValue4: "",
-      serchtxt: props.initialvalue,
-      sizeValue: "",
+      serchtxt:"",
+        sizeValue: 0,
+        levelGallonValue: 0
     };
-  }
+    } 
+    resetSearch() {
+        this.state.advanceReset = true
+        console.log("anjali")
+        this.setState({ serchtxt: "" });
+        this.state.tagValue = ""
+            this.state.tagValue1=""
+            this.state.tagValue2= ""
+            this.state.tagValue3= ""
+            this.state.tagValue4 = ""
+            this.state.levelGallonValue = ""
+           // this.state.serchtxt= this.props.initialvalue
+            this.state.filterTab = ""
+    }
+
   changeTab = (advancedTab) => {
     this.setState({
       advancedTab,
@@ -56,11 +72,16 @@ class AdvancedSearchForm extends Component {
       filterTab,
     });
   };
-  callfetchValue() {
+    callfetchValue() {
+        
     this.props.fetchSerachValue(
       this.state.serchtxt,
       this.state.tagValue1,
-      this.state.tagValue
+        this.state.tagValue2,
+        this.state.tagValue3,
+        this.state.levelGallonValue,
+        this.state.tagValue4
+
     );
   }
 
@@ -122,12 +143,14 @@ class AdvancedSearchForm extends Component {
       $("#below10").removeClass("activeSelectedTag");
     } else if (this.state.tagValue1 === "Below 30%") {
       $("#below30").removeClass("activeSelectedTag");
-    } else if (this.state.tagValue1 === "Below 30% to 80%") {
+    } else if (this.state.tagValue1 === "30% to 80%") {
       $("#below30to80").removeClass("activeSelectedTag");
     } else if (this.state.tagValue1 === "Above 80%") {
       $("#above80").removeClass("activeSelectedTag");
     }
-    $("#tgStatus").addClass("ant-tag-hidden");
+      $("#tgStatus").addClass("ant-tag-hidden");
+      this.state.tagValue1 = "";
+      //this.callfetchValue();
     // $("#dvTag_Status").remove();
   }
   handleCloseAlerts() {
@@ -136,15 +159,17 @@ class AdvancedSearchForm extends Component {
     } else if (this.state.tagValue2 === "High") {
       $("#high").removeClass("activeSelectedTag");
     }
-    $("#tgAlerts").addClass("ant-tag-hidden");
+      $("#tgAlerts").addClass("ant-tag-hidden");
+      this.state.tagValue2 = "";
   }
   handleCloseSensor() {
-    if (this.state.tagValue3 === "ON") {
+      if (this.state.tagValue3 === "Online") {
       $("#on").removeClass("activeSelectedTag");
-    } else if (this.state.tagValue3 === "OFF") {
+      } else if (this.state.tagValue3 === "Offline") {
       $("#off").removeClass("activeSelectedTag");
     }
-    $("#tgSensor").addClass("ant-tag-hidden");
+      $("#tgSensor").addClass("ant-tag-hidden");
+      this.state.tagValue3 = "";
   }
   handleCloseSize() {
     if (this.state.tagValue4 === ">=") {
@@ -154,7 +179,8 @@ class AdvancedSearchForm extends Component {
     } else if (this.state.tagValue4 === "=") {
       $("#equalto").removeClass("activeSelectedTag");
     }
-    $("#tgSize").addClass("ant-tag-hidden");
+      $("#tgSize").addClass("ant-tag-hidden");
+      this.state.tagValue4 = "";
   }
   onChange = (e) => {
     // this.setState({
@@ -163,10 +189,22 @@ class AdvancedSearchForm extends Component {
     console.log(`checked = ${e.target.checked}`);
   };
   render() {
-    const { visible, hideForm, mode } = this.props;
+      const { visible, hideForm, mode, advanceReset } = this.props;
+      if (visible === true && advanceReset === true && this.state.advanceReset===false)
+          this.resetSearch();
+      // console.log("fetchSerachValueeeee", this.props.advanceReset)
+      //if (advanceReset === true) {
+      //        this.state.tagValue="",
+      //        this.state.tagValue1 = "",
+      //        this.state.tagValue2 = "",
+      //        this.state.tagValue3 = "",
+      //        this.state.tagValue4 = "",
+      //        this.state.levelGallonValue = ""              
+      //}
+      //this.props.advanceReset = false;
     const {
       advancedTab,
-      filterTab,
+          filterTab,
       tagValue,
       tagValue1,
       tagValue2,
@@ -307,15 +345,6 @@ class AdvancedSearchForm extends Component {
                 <div className="advanced_wrapper--inrfilters">
                   {filterTab === 0 && (
                     <div>
-                      {/* <div
-                        id="dvPropane"
-                        className={`filter__selected ${
-                          tagValue ? "activeSelectedTag" : ""
-                        }`}
-                        onClick={() => this.showTagChip("Propane")}
-                      >
-                        <p>Propane</p>
-                      </div> */}
                       <FilterChips
                         id="dvPropane"
                         text="Propane"
@@ -373,15 +402,15 @@ class AdvancedSearchForm extends Component {
                     <div>
                       <FilterChips
                         id="on"
-                        text="ON"
-                        onClick={() => this.showTagSensor("ON")}
-                        selected={tagValue3 === "ON"}
+                        text="Online"
+                         onClick={() => this.showTagSensor("Online")}
+                         selected={tagValue3 === "Online"}
                       />
                       <FilterChips
                         id="off"
-                        text="OFF"
-                        onClick={() => this.showTagSensor("OFF")}
-                        selected={tagValue3 === "OFF"}
+                        text="Offline"
+                        onClick={() => this.showTagSensor("Offline")}
+                        selected={tagValue3 === "Offline"}
                       />
                     </div>
                   )}
@@ -390,7 +419,7 @@ class AdvancedSearchForm extends Component {
                       <input
                         className="vertrax__tankInput"
                         type="number"
-                        value={sizeValue}
+                       
                         onChange={(e) =>
                           this.setState({
                             levelGallonValue: e.target.value,

@@ -15,7 +15,7 @@ import wifiGrey from "../assets/images/wifi-grey.png";
 import "./styles.css";
 import { gql } from "apollo-boost";
 import { graphql } from "react-apollo";
-import LineChart from "../components/LineChart";
+import LineChart from "../components/LineChart/index11";
 import { easeQuadInOut } from "d3-ease";
 const username = localStorage.getItem("username");
 
@@ -104,6 +104,8 @@ class ClientLayout extends Component {
       description: "",
       selectid: this.props.match.params.id,
       filterChildData: {},
+      startDate: "",
+      endDate: "",
     };
     this.showForm = this.showForm.bind(this);
     this.hideForm = this.hideForm.bind(this);
@@ -119,9 +121,11 @@ class ClientLayout extends Component {
       formVisible: false,
     });
   }
-  handleChildClientHistory = (filtercondition) => {
-    console.log("filter child data", filtercondition);
+  handleChildClientHistory = (filtercondition, startDate, endDate) => {
+    console.log("filter child data", filtercondition, startDate, endDate);
     this.setState({ filterChildData: filtercondition });
+    this.setState({ startDate: startDate });
+    this.setState({ endDate: endDate });
   };
   render() {
     let { data } = this.props;
@@ -145,6 +149,8 @@ class ClientLayout extends Component {
       entry,
       selectid,
       filterChildData,
+      startDate,
+      endDate,
     } = this.state;
     return (
       <Fragment>
@@ -163,7 +169,13 @@ class ClientLayout extends Component {
                 <Link to="/">
                   <img className="hide_form" src={arrowLeft} alt="back_arrow" />
                 </Link>
-                <p>{data.tank ? data.tank.parent.description : ""}</p>
+                <p>
+                  {data.tank
+                    ? data.tank.parent
+                      ? data.tank.parent.description
+                      : ""
+                    : ""}
+                </p>
               </div>
               <div className="client_right--content">
                 {/* <Search
@@ -419,6 +431,8 @@ class ClientLayout extends Component {
                 <LineChart
                   selectedTankId={selectid}
                   passFilteredData={filterChildData}
+                  startDate={startDate}
+                  endDate={endDate}
                 />
               </div>
             </div>

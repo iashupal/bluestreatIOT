@@ -93,6 +93,9 @@ class ClientHistoryTable extends Component {
       docsCount: 10,
       totalDocsCount: 0,
       selectedTankId: "",
+      dateDiff: "",
+      dateFilterDiff: "",
+      newEndDate: "",
     };
 
     this.submitFilters = this.submitFilters.bind(this);
@@ -305,6 +308,7 @@ class ClientHistoryTable extends Component {
       startDate: "",
       endDate: "",
       levelGallonOp: "",
+      dateDiff: "",
     });
   }
   updateFiltersFromState = () => {
@@ -321,22 +325,62 @@ class ClientHistoryTable extends Component {
           },
         };
       } else if (this.state.startDate != "" && this.state.endDate != "") {
-        filtercondition = [
-          {
-            timestamp: {
-              op: ">=",
-              v: this.state.startDate,
+        let dateFilterDiff = this.state.dateFilterDiff;
+        if (!moment.isMoment(this.state.startDate))
+          this.state.startDate = moment(this.state.startDate);
+        if (!moment.isMoment(this.state.endDate))
+          this.state.endDate = moment(this.state.endDate);
+        dateFilterDiff = this.state.endDate.diff(
+          this.state.startDate,
+          "months"
+        );
+        console.log("dateFilterDiff", dateFilterDiff);
+        if (dateFilterDiff <= 13) {
+          filtercondition = [
+            {
+              timestamp: {
+                op: ">=",
+                v: this.state.startDate,
+              },
             },
-          },
-          {
-            timestamp: {
-              op: "<=",
-              v: this.state.endDate,
+            {
+              timestamp: {
+                op: "<=",
+                v: this.state.endDate,
+              },
             },
-          },
-        ];
+          ];
+        } else if (dateFilterDiff > 13 && this.state.endDate != "") {
+          console.log("date filter diff---------", dateFilterDiff);
+          let newEndDate = this.state.endDate;
+          this.state.endDate = newEndDate;
+          console.log("new end date ********", this.state.endDate);
+          if (this.state.endDate) {
+            this.state.endDate = moment(this.state.endDate);
+            this.state.endDate = this.state.endDate.subtract(
+              dateFilterDiff - 13,
+              "months"
+            );
+            this.state.endDate = this.state.endDate.format("YYYY-MM-DD");
+          }
+          console.log("newEndDate//////", this.state.endDate);
+          filtercondition = [
+            {
+              timestamp: {
+                op: ">=",
+                v: this.state.startDate,
+              },
+            },
+            {
+              timestamp: {
+                op: "<=",
+                v: this.state.endDate,
+              },
+            },
+          ];
+        }
 
-        console.log("level Percent-----", filtercondition);
+        console.log("filtered date-----", filtercondition);
       } else if (
         this.state.levelGallonValue != "" &&
         this.state.levelGallonOp != ""
@@ -355,14 +399,31 @@ class ClientHistoryTable extends Component {
     if (
       this.state.startDate != "" &&
       this.state.endDate != "" &&
-      this.checkThreeMonthData()
+      this.checkThreeMonthData(
+        this.state.startDate,
+        this.state.endDate
+        // this.state.newEndDate
+      )
     ) {
-      this.props.updateParent(filtercondition);
+      this.props.updateParent(
+        filtercondition,
+        this.state.startDate,
+        this.state.endDate
+        // this.state.newEndDate
+      );
     }
   };
-  checkThreeMonthData() {
+  checkThreeMonthData(startDate, endDate) {
     // check if gap of start and end date is more than 3 months then retun true otherwise false
-    if (1 == 1) {
+    let dateDiff = this.state.dateDiff;
+    if (!moment.isMoment(startDate)) startDate = moment(startDate);
+    if (!moment.isMoment(endDate)) {
+      endDate = moment(endDate);
+    }
+    dateDiff = endDate.diff(startDate, "months");
+    console.log("new filter end data", endDate);
+    console.log("date difference", dateDiff);
+    if (dateDiff > 4) {
       return true;
     } else {
       return false;
@@ -449,12 +510,6 @@ class ClientHistoryTable extends Component {
     console.log("entryHistory", csvData);
   }
 
-  // passFilteredDatatoParent = () => {
-  //   let childFilterData = this.props.updateParent;
-  // };
-  // handlePageChange = (activePage) => {
-  //   this.setState({ activePage });
-  // };
   // // Function to update the query with the new results
   updateQuery = (previousResult, { fetchMoreResult }) => {
     return fetchMoreResult.posts.edges.length
@@ -479,8 +534,9 @@ class ClientHistoryTable extends Component {
       docsCount,
       totalDocsCount,
       filtercondition,
-
+      dateDiff,
       selectedTankId,
+      dateFilterDiff,
     } = this.state;
 
     console.log("Csv===", csvData);

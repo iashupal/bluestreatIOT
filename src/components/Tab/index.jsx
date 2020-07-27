@@ -13,7 +13,7 @@ function Tab({ text, selected, onClick, alertCount, fireCount, styleName }) {
         <i className="fas fa-plus" />
       )}
       <p>{text}</p>
-      {selected && (
+      {/* {selected && (
         <div className="tab_alerts">
           <span>
             <i className="fas fa-exclamation-triangle"></i>
@@ -24,7 +24,7 @@ function Tab({ text, selected, onClick, alertCount, fireCount, styleName }) {
             <p>{fireCount}</p>
           </span>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
