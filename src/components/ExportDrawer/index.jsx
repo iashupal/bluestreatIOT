@@ -1,5 +1,9 @@
 import React, { Component } from "react";
 import { Drawer, Button, Row, Col, Checkbox } from "antd";
+import { gql } from "apollo-boost";
+import { Query } from "react-apollo";
+import lodash from "lodash";
+
 import SaveCard from "../SaveCard";
 import { DatePicker } from "antd";
 import moment from "moment";
@@ -11,8 +15,6 @@ import "./styles.css";
 const userId = localStorage.getItem("userId");
 const { RangePicker } = DatePicker;
 const dateFormat = "YYYY/MM/DD";
-import { gql } from "apollo-boost";
-import { Query } from "react-apollo";
 
 const tankTable = gql`
   query tankTableData($id: Int, $first: Int, $filter: QueryFilterEntry) {
@@ -88,6 +90,7 @@ class ExportDrawer extends Component {
       currentPage: 1,
       showFilterBtn: true,
       tankExportData: {},
+      isFilterPropsChanged: false,
       checkBoxes: {
         "Tank Number": true,
         "Tank Name": true,
@@ -125,34 +128,34 @@ class ExportDrawer extends Component {
     console.log("checkboxes value", checkBoxes);
   }
 
-  // changeAll = ({ target: { checked } }) => {
-  //   const { checkBoxes } = this.state;
-  //   const updates = {};
-  //   // if (checked === true) {
-  //   Object.keys(checkBoxes).forEach(
-  //     (checkBox) => (updates[checkBox] = checked)
-  //   );
-  //   this.setState({ checkBoxes: { ...updates }, showFilterBtn: true }, () =>
-  //     this.setCSV()
-  //   );
-
-  //   // } else {
-  //   //   Object.keys(checkBoxes).forEach(
-  //   //     (checkBox) => (updates[checkBox] = false)
-  //   //   );
-  //   //   this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
-  //   // }
-  // };
-
-  clearCheckBoxes = () => {
-    console.log("clearall");
+  changeAll = ({ target: { checked } }) => {
     const { checkBoxes } = this.state;
     const updates = {};
-    Object.keys(checkBoxes).forEach((checkBox) => (updates[checkBox] = false));
-    this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
+    // if (checked === true) {
+    Object.keys(checkBoxes).forEach(
+      (checkBox) => (updates[checkBox] = checked)
+    );
+    this.setState({ checkBoxes: { ...updates }, showFilterBtn: true }, () =>
+      this.setCSV()
+    );
+
+    // } else {
+    //   Object.keys(checkBoxes).forEach(
+    //     (checkBox) => (updates[checkBox] = false)
+    //   );
+    //   this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
+    // }
   };
+
+  // clearCheckBoxes = () => {
+  //   console.log("clearall");
+  //   const { checkBoxes } = this.state;
+  //   const updates = {};
+  //   Object.keys(checkBoxes).forEach((checkBox) => (updates[checkBox] = false));
+  //   this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
+  // };
   setCSV() {
-    console.log("setCSV");
+    console.log("-------------- setCSV");
     const { checkBoxes, tankExportData } = this.state;
     const { selectedCheckboxKeys, tankData, tankFilteredData } = this.props;
     let entryHistory = [];
@@ -231,6 +234,28 @@ class ExportDrawer extends Component {
     console.log("tankExportData", tankExportData);
   }
 
+  componentDidUpdate(prevProps) {
+    const prevPropsTankFilteredData = prevProps.tankFilteredData;
+    const nextPropsTankFilteredData = this.props.tankFilteredData;
+
+    const prevPropsSelectedCheckboxKeys = prevProps.selectedCheckboxKeys;
+    const nextPropsSelectedCheckboxKeys = this.props.selectedCheckboxKeys;
+
+    if (!lodash.isEqual(prevPropsTankFilteredData, nextPropsTankFilteredData)) {
+      this.setState({ isFilterPropsChanged: true });
+    }
+
+    if (
+      !lodash.isEqual(
+        prevPropsSelectedCheckboxKeys,
+        nextPropsSelectedCheckboxKeys
+      ) &&
+      Object.keys(this.state.tankExportData).length
+    ) {
+      this.setCSV();
+    }
+  }
+
   render() {
     const { visible, hideForm, tankData } = this.props;
     const {
@@ -240,11 +265,12 @@ class ExportDrawer extends Component {
       showFilterBtn,
       tankExportData,
       tanksDataId,
+      isFilterPropsChanged,
     } = this.state;
     console.log("tanksDataid -- ", this.props.tanksDataId);
     console.log("selectedCheckboxKeys -- ", this.props.selectedCheckboxKeys);
     console.log("selectedRowKeys", this.props.selectedCheckboxKeys);
-    console.log("tankData - ", tankData);
+    console.log("tankFilteredData - ", this.props.tankFilteredData);
 
     return (
       <div className="advanced_form">
@@ -272,12 +298,17 @@ class ExportDrawer extends Component {
                 if (
                   !Object.keys(tankExportData).length ||
                   String(this.state.tanksDataId) !==
-                    String(this.props.tanksDataId)
+                    String(this.props.tanksDataId) ||
+                  isFilterPropsChanged
                 )
-                  this.setState({
-                    tankExportData: { ...data.locationEntry.tanks },
-                    tanksDataId: this.props.tanksDataId,
-                  });
+                  this.setState(
+                    {
+                      tankExportData: { ...data.locationEntry.tanks },
+                      tanksDataId: this.props.tanksDataId,
+                      isFilterPropsChanged: false,
+                    },
+                    () => this.setCSV()
+                  );
                 console.log("tankExportData", tankExportData);
                 return (
                   data &&
