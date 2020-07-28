@@ -15,7 +15,7 @@ import wifiGrey from "../assets/images/wifi-grey.png";
 import "./styles.css";
 import { gql } from "apollo-boost";
 import { graphql } from "react-apollo";
-import LineChart from "../components/LineChart/index11";
+import LineChart from "../components/LineChart";
 import { easeQuadInOut } from "d3-ease";
 const username = localStorage.getItem("username");
 

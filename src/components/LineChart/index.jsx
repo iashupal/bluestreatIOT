@@ -1,13 +1,18 @@
-import React, { Fragment } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 import Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import { gql } from "apollo-boost";
-import { Query } from "react-apollo";
 import { useQuery } from "@apollo/react-hooks";
 import Loader from "../Loader";
+import moment from "moment";
 
 const lineGraph = gql`
-  query lineGraphData($id: Int, $fromdate: String, $todate: String) {
+  query lineGraphData(
+    $id: Int
+    $first: Int
+    $fromdate: String
+    $todate: String
+  ) {
     tank(id: $id) {
       id
       specifications {
@@ -16,7 +21,7 @@ const lineGraph = gql`
         capacityGallons
       }
       readings(
-        first: 100
+        first: $first
         filter: [
           { timestamp: { op: ">=", v: $fromdate } }
           { timestamp: { op: "<=", v: $todate } }
@@ -33,67 +38,164 @@ const lineGraph = gql`
     }
   }
 `;
+var xAxisData = [];
+var yAxisData = [];
 
-class LineChart extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      lineGraphData: {},
-      xGraphData: {},
-      yGraphData: {},
-      selectedTankId: "",
-    };
+var today = new Date();
+var todaysDate = new Date();
+var last30days = new Date(today.setDate(today.getDate() - 30));
+console.log("todays date-----", today, last30days);
+const option1 = {
+  chart: {
+    type: "area",
+  },
+  title: {
+    text: "Client Tank Capacity (%)",
+  },
+  xAxis: [
+    {
+      categories: xAxisData,
+      // categories: ["Apples", "Oranges", "Pears", "Grapes", "Bananas"],
+      tickInterval: 7 * 24 * 3600 * 1000,
+      // tickmarkPlacement: "on",
+      type: "datetime",
+      title: {
+        enabled: false,
+      },
+      tickPositioner: function () {
+        var positions = [],
+          interval = 24 * 3600 * 1000 * 7;
+        for (var i = this.min; i < this.max; i += interval) {
+          positions.push(i);
+        }
+        return positions;
+      },
+    },
+  ],
+  yAxis: {
+    labels: {
+      format: "{value}%",
+    },
+    title: {
+      enabled: false,
+    },
+  },
+
+  plotOptions: {
+    area: {
+      fillColor: {
+        linearGradient: {
+          x1: 0,
+          y1: 0,
+          x2: 0,
+          y2: 1,
+        },
+        stops: [
+          [0, Highcharts.getOptions().colors[0]],
+          [
+            1,
+            Highcharts.color(Highcharts.getOptions().colors[0])
+              .setOpacity(0)
+              .get("rgba"),
+          ],
+        ],
+      },
+      marker: {
+        radius: 2,
+      },
+      lineWidth: 1,
+      states: {
+        hover: {
+          lineWidth: 1,
+        },
+      },
+
+      // threshold: null,
+    },
+  },
+
+  series: [
+    {
+      // pointStart: Date.now() - 29 * 24 * 60 * 60 * 1000 * 7,
+      // pointInterval: 24 * 3600 * 1000 * 7,
+      name: "Level",
+      data: yAxisData,
+    },
+  ],
+};
+
+function LineChart(props) {
+  let [newFromDate, setnewFromDate] = useState("");
+  var [oneDay, setOneDay] = useState("");
+  let [newToDate, setnewToDate] = useState("");
+  let [newCurrentDate, setnewCurrentDate] = useState("");
+
+  newFromDate = props.endDate;
+  newToDate = props.endDate;
+  if (newFromDate) {
+    newFromDate = moment(newFromDate);
+    newFromDate = newFromDate.subtract(4, "months");
+    var newFromFilterDate = newFromDate.format("YYYY-MM-DD");
   }
-  render() {
-    const {
-      lineGraphData,
-      xGraphData,
-      yGraphData,
-      selectedTankId,
-    } = this.state;
+
+  console.log("new from date", newFromFilterDate);
+  console.log("newToDate", newToDate);
+  // console.log("today", today.toUTCString());
+  console.log("Today: ", todaysDate.toUTCString());
+  console.log("Last 30th day: " + last30days.toUTCString());
+  // oneDay = newToDate || last30days;
+  if (newFromDate != null || newFromDate != "") {
+    console.log("**************************************** ", newFromDate);
+    oneDay = newFromDate;
+  } else {
+    oneDay = last30days;
+  }
+  if (newToDate != null || newToDate != "") {
+    console.log("newTOdate---------------", newToDate);
+    newCurrentDate = newToDate;
+  } else {
+    newCurrentDate = todaysDate;
+  }
+
+  const { loading, error, data } = useQuery(lineGraph, {
+    variables: {
+      id: props.selectedTankId,
+      first: 1000,
+      fromdate: oneDay,
+      todate: newCurrentDate,
+    },
+  });
+  if (loading || !data)
     return (
-      <Fragment>
-        <Query query={lineGraph} variables={{ id: this.props.selectedTankId }}>
-          {({ data, error, loading }) => {
-            if (loading) {
-              return (
-                <div>
-                  <Loader />
-                </div>
-              );
-            }
-            if (error) {
-              return <div>Error</div>;
-            } else if (data) {
-              if (
-                !Object.keys(lineGraphData).length ||
-                String(this.state.selectedTankId) !==
-                  String(this.props.selectedTankId)
-              )
-                this.setState({
-                  lineGraphData: { ...data.tank.readings.edges },
-                  selectedTankId: this.props.selectedTankId,
-                });
-              console.log("line graph data", data.tank.readings.edges);
-              return (
-                data &&
-                data.tank && (
-                  <>
-                    <p>dfghjklkjhgfdghjk</p>
-                    {/* <HighchartsReact
-                      highcharts={Highcharts}
-                      //   options={chartOptions}
-                      //   onChange={onFilterDataChangeGraph}
-                    /> */}
-                  </>
-                )
-              );
-            }
-          }}
-        </Query>
-      </Fragment>
+      <p>
+        <Loader />
+      </p>
     );
-  }
-}
 
+  if (data.tank.readings.edges.length > 0) {
+    data.tank.readings.edges.map((item) => {
+      xAxisData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
+      yAxisData.push(item.node.levelPercent);
+    });
+  }
+
+  // useEffect(() => {
+  //   setnewToDate(newFromDate);
+  // }, [newFromDate]);
+
+  console.log("filtered date basis data", props.passFilteredData);
+  console.log("startDate", props.startDate);
+  console.log("endDate ", props.endDate);
+  console.log("xAxisData", xAxisData);
+  console.log("yAxisData", yAxisData);
+  console.log("selectedtankid", props.selectedTankId);
+  console.log("linegraph", data);
+  if (error) return console.log("Failed to fetch");
+
+  return (
+    <Fragment>
+      <HighchartsReact highcharts={Highcharts} options={option1} />
+    </Fragment>
+  );
+}
 export default LineChart;

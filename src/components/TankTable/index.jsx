@@ -5,7 +5,7 @@ import ContentCard from "../ContentCard";
 import Badge from "../Badge";
 import ReactDragListView from "react-drag-listview";
 import Loader from "../../components/Loader";
-import ExportDrawer from "../ExportDrawer/index11";
+import ExportDrawer from "../ExportDrawer";
 import AdvancedSearchForm from "../AdvancedSearchForm";
 import arrowDownGrey from "../../assets/images/arrow-down-grey.png";
 import wifiBlue from "../../assets/images/wifi-blue.png";
