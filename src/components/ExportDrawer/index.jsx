@@ -1,5 +1,9 @@
 import React, { Component } from "react";
 import { Drawer, Button, Row, Col, Checkbox } from "antd";
+import { gql } from "apollo-boost";
+import { Query } from "react-apollo";
+import lodash from "lodash";
+
 import SaveCard from "../SaveCard";
 import { DatePicker } from "antd";
 import moment from "moment";
@@ -11,8 +15,6 @@ import "./styles.css";
 const userId = localStorage.getItem("userId");
 const { RangePicker } = DatePicker;
 const dateFormat = "YYYY/MM/DD";
-import { gql } from "apollo-boost";
-import { Query } from "react-apollo";
 
 const tankTable = gql`
   query tankTableData($id: Int, $first: Int, $filter: QueryFilterEntry) {
@@ -88,6 +90,7 @@ class ExportDrawer extends Component {
       currentPage: 1,
       showFilterBtn: true,
       tankExportData: {},
+      isFilterPropsChanged: false,
       checkBoxes: {
         "Tank Number": true,
         "Tank Name": true,
@@ -98,7 +101,8 @@ class ExportDrawer extends Component {
         "Current Volume": true,
         "Refill Potential": true,
         "Tank Capacity": true,
-        Temperature: true,
+        TemperatureCelcius: true,
+        TemperatureFehrenheit: true,
         Battery: true,
       },
     };
@@ -116,7 +120,7 @@ class ExportDrawer extends Component {
     );
   };
   componentDidMount() {
-    const { checkBoxes, tankExportData } = this.state;
+    const { checkBoxes } = this.state;
     const updates = {};
     Object.keys(checkBoxes).forEach((checkBox) => (updates[checkBox] = true));
     this.setState({ checkBoxes: { ...updates }, showFilterBtn: true }, () =>
@@ -125,34 +129,33 @@ class ExportDrawer extends Component {
     console.log("checkboxes value", checkBoxes);
   }
 
-  // changeAll = ({ target: { checked } }) => {
-  //   const { checkBoxes } = this.state;
-  //   const updates = {};
-  //   // if (checked === true) {
-  //   Object.keys(checkBoxes).forEach(
-  //     (checkBox) => (updates[checkBox] = checked)
-  //   );
-  //   this.setState({ checkBoxes: { ...updates }, showFilterBtn: true }, () =>
-  //     this.setCSV()
-  //   );
-
-  //   // } else {
-  //   //   Object.keys(checkBoxes).forEach(
-  //   //     (checkBox) => (updates[checkBox] = false)
-  //   //   );
-  //   //   this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
-  //   // }
-  // };
-
-  clearCheckBoxes = () => {
-    console.log("clearall");
+  changeAll = ({ target: { checked } }) => {
     const { checkBoxes } = this.state;
     const updates = {};
-    Object.keys(checkBoxes).forEach((checkBox) => (updates[checkBox] = false));
-    this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
+    if (checked === true) {
+      Object.keys(checkBoxes).forEach(
+        (checkBox) => (updates[checkBox] = checked)
+      );
+      this.setState({ checkBoxes: { ...updates }, showFilterBtn: true }, () =>
+        this.setCSV()
+      );
+    } else {
+      Object.keys(checkBoxes).forEach(
+        (checkBox) => (updates[checkBox] = false)
+      );
+      this.setState({ showFilterBtn: false, checkBoxes: { ...updates } });
+    }
   };
+
+  // clearCheckBoxes = () => {
+  //   console.log("clearall");
+  //   const { checkBoxes } = this.state;
+  //   const updates = {};
+  //   Object.keys(checkBoxes).forEach((checkBox) => (updates[checkBox] = false));
+  //   this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
+  // };
   setCSV() {
-    console.log("setCSV");
+    console.log("-------------- setCSV");
     const { checkBoxes, tankExportData } = this.state;
     const { selectedCheckboxKeys, tankData, tankFilteredData } = this.props;
     let entryHistory = [];
@@ -188,26 +191,41 @@ class ExportDrawer extends Component {
         Commodity: "Propane",
         "Current Volume": item.node.latestReading
           ? item.node.latestReading.levelPercent != null
-            ? item.node.latestReading.levelPercent *
-                100 *
-                (item.node.specifications
-                  ? item.node.specifications.capacityGallons / 100
-                  : 0) +
+            ? Math.round(
+                item.node.latestReading.levelPercent *
+                  100 *
+                  (item.node.specifications
+                    ? item.node.specifications.capacityGallons / 100
+                    : 0)
+              ) +
               " " +
-              "G"
-            : 0 + "G"
+              item.node.specifications.capacityUnits
+            : 0
           : "0",
         "Refill Potential": item.node.latestReading
           ? item.node.latestReading.refillPotentialGallons
-            ? item.node.latestReading.refillPotentialGallons
+            ? Math.round(item.node.latestReading.refillPotentialGallons) +
+              " " +
+              item.node.specifications.capacityUnits
             : "0"
           : "0",
         "Tank Capacity": item.node.specifications
-          ? item.node.specifications.capacityGallons
+          ? Math.round(item.node.specifications.capacityGallons) +
+            " " +
+            item.node.specifications.capacityUnits
           : "",
-        Temperature: item.node.latestReading
+        TemperatureCelcius: item.node.latestReading
           ? item.node.latestReading.temperatureCelsius
-            ? item.node.latestReading.temperatureCelsius
+            ? item.node.latestReading.temperatureCelsius.toFixed(1) + " " + "C"
+            : "0"
+          : 0,
+        TemperatureFehrenheit: item.node.latestReading
+          ? item.node.latestReading.temperatureCelsius
+            ? (item.node.latestReading.temperatureCelsius * 1.8 + 32).toFixed(
+                1
+              ) +
+              " " +
+              "F"
             : "0"
           : 0,
         Battery: item.node.latestReading
@@ -231,8 +249,30 @@ class ExportDrawer extends Component {
     console.log("tankExportData", tankExportData);
   }
 
+  componentDidUpdate(prevProps) {
+    const prevPropsTankFilteredData = prevProps.tankFilteredData;
+    const nextPropsTankFilteredData = this.props.tankFilteredData;
+
+    const prevPropsSelectedCheckboxKeys = prevProps.selectedCheckboxKeys;
+    const nextPropsSelectedCheckboxKeys = this.props.selectedCheckboxKeys;
+
+    if (!lodash.isEqual(prevPropsTankFilteredData, nextPropsTankFilteredData)) {
+      this.setState({ isFilterPropsChanged: true });
+    }
+
+    if (
+      !lodash.isEqual(
+        prevPropsSelectedCheckboxKeys,
+        nextPropsSelectedCheckboxKeys
+      ) &&
+      Object.keys(this.state.tankExportData).length
+    ) {
+      this.setCSV();
+    }
+  }
+
   render() {
-    const { visible, hideForm, tankData } = this.props;
+    const { visible, hideForm } = this.props;
     const {
       pageSize,
       checkBoxes,
@@ -240,11 +280,12 @@ class ExportDrawer extends Component {
       showFilterBtn,
       tankExportData,
       tanksDataId,
+      isFilterPropsChanged,
     } = this.state;
     console.log("tanksDataid -- ", this.props.tanksDataId);
     console.log("selectedCheckboxKeys -- ", this.props.selectedCheckboxKeys);
     console.log("selectedRowKeys", this.props.selectedCheckboxKeys);
-    console.log("tankData - ", tankData);
+    console.log("tankFilteredData - ", this.props.tankFilteredData);
 
     return (
       <div className="advanced_form">
@@ -272,12 +313,17 @@ class ExportDrawer extends Component {
                 if (
                   !Object.keys(tankExportData).length ||
                   String(this.state.tanksDataId) !==
-                    String(this.props.tanksDataId)
+                    String(this.props.tanksDataId) ||
+                  isFilterPropsChanged
                 )
-                  this.setState({
-                    tankExportData: { ...data.locationEntry.tanks },
-                    tanksDataId: this.props.tanksDataId,
-                  });
+                  this.setState(
+                    {
+                      tankExportData: { ...data.locationEntry.tanks },
+                      tanksDataId: this.props.tanksDataId,
+                      isFilterPropsChanged: false,
+                    },
+                    () => this.setCSV()
+                  );
                 console.log("tankExportData", tankExportData);
                 return (
                   data &&
@@ -464,16 +510,31 @@ class ExportDrawer extends Component {
                                   <Checkbox
                                     onChange={this.onChange}
                                     name="temperatureCelsius"
-                                    value="Temperature"
-                                    checked={checkBoxes["Temperature"]}
+                                    value="TemperatureCelcius"
+                                    checked={checkBoxes["TemperatureCelcius"]}
                                   >
                                     {" "}
-                                    Temperature
+                                    Temperature Celcius
                                   </Checkbox>
                                 </div>
                               </Col>
                             </Row>
                             <Row gutter={16}>
+                              <Col span={12}>
+                                <div className="export__data--content">
+                                  <Checkbox
+                                    onChange={this.onChange}
+                                    name="temperatureFehrenheit"
+                                    value="TemperatureFehrenheit"
+                                    checked={
+                                      checkBoxes["TemperatureFehrenheit"]
+                                    }
+                                  >
+                                    {" "}
+                                    Temperature Fehrenheit
+                                  </Checkbox>
+                                </div>
+                              </Col>
                               <Col span={12}>
                                 <div className="export__data--content">
                                   <Checkbox
@@ -498,15 +559,15 @@ class ExportDrawer extends Component {
                         }}
                       >
                         <CSVLink
-                          // disabled={showFilterBtn}
+                          disabled={!showFilterBtn}
                           data={this.state.csvData}
-                          filename={`Tanks_List-${moment(
-                            new Date()
-                          ).toISOString()}.csv`}
+                          filename={`Tanks_List-${moment(new Date()).format(
+                            "YYYY-MM-DD"
+                          )}.csv`}
                         >
                           <Button
                             size="large"
-                            // disabled={showFilterBtn}
+                            disabled={!showFilterBtn}
                             className="client_export--btn"
                             icon={
                               <img
