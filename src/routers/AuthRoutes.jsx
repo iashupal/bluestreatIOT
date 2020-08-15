@@ -3,16 +3,16 @@ import { Switch, Route } from "react-router-dom";
 // import Loader from "../components/Loader";
 // import Loadable from "react-loadable";
 import ForgotPassword from "../components/Accounts/ForgotPassword";
-import Login from "../components/Accounts/Login";
+import LoginForm from "../components/Accounts/LoginForm";
 // const Login = Loadable({
-//   loader: () => import("../components/Accounts/Login"),
+//   loader: () => import("../layout/Login"),
 //   loading: Loader,
 // });
 
 function AuthRouter() {
   return (
     <Switch>
-      <Route path="/" component={Login} />
+      <Route path="/" exact component={LoginForm} />
       <Route path="/forgot-password" exact component={ForgotPassword} />
     </Switch>
   );

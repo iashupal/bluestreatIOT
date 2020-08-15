@@ -11,33 +11,60 @@ import "./styles.css";
 import { Auth } from "aws-amplify";
 import { AuthenticationDetails } from "amazon-cognito-identity-js";
 
-function Login() {
+function LoginForm(props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [checked, setChecked] = useState(false);
-  const { loading } = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const onSubmit = (event) => {
     event.preventDefault();
+
     const authDetails = new AuthenticationDetails({
       Username: email,
       Password: password,
     });
+    setLoading(true);
     if (checked && email !== "") {
       localStorage.email = email;
       localStorage.password = password;
       localStorage.checkbox = checked;
     }
+
     Auth.signIn(authDetails, checked)
       .then((data) => {
+        console.log("Logged in", data);
         // localStorage.setItem("token", data.session.idToken.jwtToken);
+        localStorage.setItem("tankStatus", "");
+        localStorage.setItem("adserchtxt", "");
+        localStorage.setItem("adlevelvalue", "");
+        localStorage.setItem("adlevelOp", "");
+        localStorage.setItem("adAlert", "");
+        localStorage.setItem("adSensor", "");
+        localStorage.setItem("adLevelGraphValue", "");
+        localStorage.setItem("Description", "");
+        localStorage.getItem("adLevelGraphOP", "");
+        localStorage.setItem("adTankSiveV", 0);
+        localStorage.setItem("adTankSiveOP", "");
+        localStorage.setItem("filterArray", JSON.stringify([]));
+        localStorage.setItem("saveFilter", JSON.stringify({}));
+        localStorage.setItem("token", data.signInUserSession.idToken.jwtToken);
+        localStorage.setItem("id_email", data.attributes.email);
+        localStorage.setItem("advanceTab", JSON.stringify(0));
+        localStorage.setItem("saveSearchesDate", "");
 
         console.log("Logged in", data);
-        window.location.href = "/";
+        window.location.href = "/tanks";
       })
       .catch((err) => {
-        setErrorMessage(err.message);
+        setLoading(true);
+        if (err.code == "InvalidParameterException") {
+          setErrorMessage("Password should not be blank.");
+        } else {
+          setErrorMessage(err.message);
+        }
+        setLoading(false);
         console.error("Failed to login", err);
       });
   };
@@ -94,7 +121,6 @@ function Login() {
                 className="signin_btn"
                 type="primary"
                 size="large"
-                icon={<PoweroffOutlined />}
                 icon={<img className="arrow" src={arrowLeft} alt="Sign In" />}
                 onClick={onSubmit}
                 loading={loading}
@@ -109,7 +135,7 @@ function Login() {
   );
 }
 
-export default Login;
+export default LoginForm;
 
 // import React, { Fragment, useState, Component } from "react";
 // import { Form, Input, Button, Checkbox, message } from "antd";

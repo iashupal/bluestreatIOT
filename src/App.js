@@ -104,6 +104,7 @@ import { gql } from "apollo-boost";
 import { ApolloProvider } from "react-apollo";
 import Amplify from "aws-amplify";
 import AuthRoutes from "./routers/AuthRoutes";
+import { withRouter } from "react-router-dom";
 const amplifyConfig = {
   region: process.env.REACT_APP_AWS_REGION || "us-west-2",
   Analytics: {
@@ -172,18 +173,46 @@ function App({ props }) {
 
   useEffect(() => {
     async function doGraphQL() {
-      const data = await callGraphQL();
-
-      console.log(data);
-      if (data) {
-        localStorage.setItem("userId", data.loggedInUser.homeLocation.id);
-        localStorage.setItem(
-          "username",
-          data.loggedInUser.homeLocation.description
-        );
-        // setEmail(data.loggedInUser.email);
-        setHomeLocationDescription(data.loggedInUser.homeLocation.description);
+      if (localStorage.getItem("login_user_id")) {
+        localStorage.setItem("userId", localStorage.getItem("login_user_id"));
+          localStorage.setItem("tankStatus", "");
+          localStorage.setItem("Description", "");
+        localStorage.setItem("adserchtxt", "");
+        localStorage.setItem("adlevelvalue", "");
+        localStorage.setItem("adlevelOp", "");
+        localStorage.setItem("adAlert", "");
+        localStorage.setItem("adSensor", "");
+        localStorage.setItem("adTankSiveV", 0);
+        localStorage.setItem("adTankSiveOP", "");
+        localStorage.setItem("IsSearchButton", JSON.parse(false));
+        localStorage.setItem("filterArray", JSON.stringify([]));
+        localStorage.setItem("saveFilter", JSON.stringify({}));
+        localStorage.setItem("advanceTab", JSON.stringify(0));
+        localStorage.setItem("saveSearchesDate", "");
+        localStorage.setItem("adLevelGraphValue", "");
+        localStorage.getItem("adLevelGraphOP", "");
         setSignedIn(true);
+      } else {
+        const data = await callGraphQL();
+        if (data) {
+          console.log("data", data);
+          localStorage.setItem("id_email", data.loggedInUser.email);
+          localStorage.setItem("userId", data.loggedInUser.homeLocation.id);
+          localStorage.setItem(
+            "login_user_id",
+            data.loggedInUser.homeLocation.id
+          );
+          localStorage.setItem(
+            "username",
+            data.loggedInUser.homeLocation.description
+          );
+
+          // setEmail(data.loggedInUser.email);
+          setHomeLocationDescription(
+            data.loggedInUser.homeLocation.description
+          );
+          setSignedIn(true);
+        }
       }
     }
     doGraphQL();
@@ -200,4 +229,4 @@ function App({ props }) {
   );
 }
 
-export default App;
+export default withRouter(App);

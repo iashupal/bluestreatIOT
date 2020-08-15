@@ -30,5 +30,5 @@ Button.ant-btn-lg.activeFiltersTab:after {
   border-top: 10px solid transparent;
   border-bottom: 10px solid transparent;
 
-  border-right: 10px solid blue;
+  border-right: 10px solid var(--color-primary);
 }

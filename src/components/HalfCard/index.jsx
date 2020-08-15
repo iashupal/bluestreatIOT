@@ -308,9 +308,11 @@ function HalfCard({ selectedTank, selectedTypeGateway }) {
                 <span>Available</span>
                 <p className="card_small--count">
                   {graphsData.locationEntry
-                    ? graphsData.locationEntry.bulk.aggregate
-                        .sum_capacityGallons
-                    : ""}
+                    ? Math.round(
+                        graphsData.locationEntry.bulk.aggregate
+                          .sum_capacityGallons
+                      ).toLocaleString()
+                    : ""}{" "}
                   G
                 </p>
               </div>
@@ -318,9 +320,11 @@ function HalfCard({ selectedTank, selectedTypeGateway }) {
                 <span>Potential</span>
                 <p className="card_small--count">
                   {graphsData.locationEntry
-                    ? graphsData.locationEntry.client.aggregate
-                        .sum_capacityGallons
-                    : "0"}
+                    ? Math.round(
+                        graphsData.locationEntry.client.aggregate
+                          .sum_capacityGallons
+                      ).toLocaleString()
+                    : "0"}{" "}
                   G
                 </p>
               </div>

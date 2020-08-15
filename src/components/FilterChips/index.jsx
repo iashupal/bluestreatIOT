@@ -12,11 +12,16 @@ function FilterChips({ text, selected, onClick, id }) {
       size="large"
     >
       {text}
+          {/* //{selected ? (
+      //  <MinusOutlined className="minusIcon" />
+      //) : (
+      //  <img src={plusBlue} alt="selectedTag" />
+      //)}
       {selected ? (
-        <MinusOutlined className="minusIcon" />
+        <img src={plusBlue} alt="selectedTag" />
       ) : (
         <img src={plusBlue} alt="selectedTag" />
-      )}
+      )} */}
     </div>
   );
 }

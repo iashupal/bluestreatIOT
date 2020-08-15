@@ -96,9 +96,24 @@
 .signin_left img {
   width: 100%;
   height: 700px;
+  object-fit: cover;
+}
+.signin_btn .anticon.anticon-loading {
+  float: right;
 }
 
 .signin_inr_rght .ant-checkbox-input {
   width: initial;
   margin-right: 10px;
+}
+/* media query */
+@media screen and (max-width: 1650px) {
+  .signin_btn.ant-btn-primary {
+    width: 55%;
+  }
+}
+@media screen and (max-width: 1450px) {
+  .signin_inr_rght {
+    width: 65%;
+  }
 }

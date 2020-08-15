@@ -5,6 +5,7 @@ import { gql } from "apollo-boost";
 import { useQuery, useLazyQuery } from "@apollo/react-hooks";
 import Loader from "../Loader";
 import moment from "moment";
+import "./style.css";
 
 const lineGraph = gql`
   query lineGraphData(
@@ -22,6 +23,8 @@ const lineGraph = gql`
       }
       readings(
         first: $first
+        sortDirection: desc
+        sortBy: timestamp
         filter: [
           { timestamp: { op: ">=", v: $fromdate } }
           { timestamp: { op: "<=", v: $todate } }
@@ -54,12 +57,23 @@ _.times(monthDate.daysInMonth(), function (n) {
 function LineChart(props) {
   const [xAxisData, setXAxisData] = useState(daysInMonth.slice(0, -1));
   const [yAxisData, setYAxisData] = useState([]);
+  const [message, setMessage] = useState("");
+
+  //var fetchedTankData = props.fetchedTankData;
+  console.log("anjali", props.fetchedTankData);
   const [options, setOptions] = useState({
     chart: {
       type: "area",
+      spacingRight: 50,
     },
     title: {
-      text: "Client Tank Capacity (%)",
+      text: "Client tank capacity (%- Last read of the day)",
+    },
+    subtitle: {
+      text: message,
+      style: {
+        fontSize: "24px",
+      },
     },
     xAxis: [
       {
@@ -68,9 +82,6 @@ function LineChart(props) {
         type: "datetime",
         title: {
           enabled: false,
-        },
-        dateTimeLabelFormats: {
-          week: "%e of %b",
         },
       },
     ],
@@ -112,6 +123,11 @@ function LineChart(props) {
         },
       },
     },
+    tooltip: {
+      pointFormat:
+        "<tr><td>{series.name}: </td>" +
+        '<td style="text-align: right"><b>{point.y} %</b></td></tr>',
+    },
     series: [
       {
         name: "Level",
@@ -119,23 +135,28 @@ function LineChart(props) {
       },
     ],
   });
+  const [fetchedData, setFetchedData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [edges, setEdges] = useState([]);
+  console.log("Helllllo", props.dateDiff);
   const [currentDate, setCurrentDate] = useState(
-    props.endDate ? props.endDate : todaysDate
+      props.dateDiff <= 3 ? moment(props.endDate).add(1, 'd') : moment(props.endDate).add(1, 'd')
   );
   const [previousDate, setPreviousDate] = useState(
-    props.endDate
-      ? moment(props.endDate).subtract(3, "months").format("YYYY-MM-DD")
-      : last30days
+    props.dateDiff <= 3
+      ? props.startDate
+      : moment(props.endDate).subtract(3, "months").format("YYYY-MM-DD")
   );
 
   useEffect(() => {
-    setCurrentDate(props.endDate ? props.endDate : todaysDate);
+    console.log("Helllllo", props.dateDiff);
+    //setFetchedData(props.TankData)
+    //console.log("fetchedData", fetchedData)
+      setCurrentDate(props.dateDiff <= 3 ? moment(props.endDate).add(1, 'd') : moment(props.endDate).add(1, 'd'));
     setPreviousDate(
-      props.endDate
-        ? moment(props.endDate).subtract(3, "months").format("YYYY-MM-DD")
-        : last30days
+      props.dateDiff <= 3
+        ? props.startDate
+        : moment(props.endDate).subtract(3, "months").format("YYYY-MM-DD")
     );
   }, [JSON.stringify(props.endDate)]);
   console.log(props.endDate);
@@ -162,31 +183,91 @@ function LineChart(props) {
     }
     if (data && data.tank.readings.edges.length > 0) {
       setLoading(false);
-      const xData = [];
-      const yData = [];
+      var xData = [];
+      var yData = [];
       const xFilterData = [];
+      var resultValue = [];
       var Xresult = 0;
+      var dateValue = "";
       console.log("Previous Value", data.tank.readings.edges);
-      data.tank.readings.edges.map((item) => {
+      resultValue = data.tank.readings.edges;
+        for (let i = 0; i <= resultValue.length - 1; i++) {
+        //if (
+        //  i == 0 &&
+        //  !xFilterData.includes(
+        //    moment(resultValue[i].node.timestamp).format("YYYY-MM-DD")
+        //  )
+        //) {
+        //  xData.push(
+        //    moment(resultValue[i].node.timestamp).format("YYYY-MM-DD")
+        //  );
+        //}
         if (
           !xFilterData.includes(
-            moment(item.node.timestamp).format("YYYY-MM-DD")
+            moment(resultValue[i].node.timestamp).format("YYYY-MM-DD")
           )
         ) {
           console.log("After removing the duplicate element", xFilterData);
           if (Xresult % 7 == 0) {
-            xData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
-            yData.push(item.node.levelPercent);
+            xData.push(
+              moment(resultValue[i].node.timestamp).format("YYYY-MM-DD")
+            );
+          } else {
+            xData.push("");
           }
-          xFilterData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
+          yData.push(Math.round(resultValue[i].node.levelPercent * 100));
+          xFilterData.push(
+            moment(resultValue[i].node.timestamp).format("YYYY-MM-DD")
+          );
           Xresult = Xresult + 1;
         }
-        // xData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
-      });
-      console.log(xData);
+        //  xData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
+      }
+      //  data.tank.readings.edges.map((item) => {
+      //      resultValue = item;
+      //      if (dateValue == resultValue.moment(item.node.timestamp).format("YYYY-MM-DD")) {
+      //          dateValue = resultValue.moment(item.node.timestamp).format("YYYY-MM-DD");
+      //      }
+      //      else {
+      //          if (
+      //              !xFilterData.includes(
+      //                  moment(item.node.timestamp).format("YYYY-MM-DD")
+      //              )
+      //          ) {
+      //              console.log("After removing the duplicate element", xFilterData);
+      //              if (Xresult % 7 == 0) {
+      //                  xData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
+      //              }
+      //              else {
+      //                  xData.push("");
+      //              }
+      //              yData.push(item.node.levelPercent * 100);
+      //              xFilterData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
+      //              Xresult = Xresult + 1;
+      //          }
+      //      }
+
+      //   xData.push(moment(item.node.timestamp).format("YYYY-MM-DD"));
+      //});
+      console.log("Heellllo", xData);
+      //xData = xData.reverse();
+      //yData = yData.reverse();
       setXAxisData([...xData]);
       setYAxisData([...yData]);
       const updatedOptions = { ...options };
+      updatedOptions.subtitle.text = "";
+      updatedOptions.xAxis[0].categories = xData;
+      updatedOptions.series[0].data = yData;
+      console.log("updatedOption", updatedOptions);
+      setOptions({ ...updatedOptions });
+    } else if (data && data.tank.readings.edges.length == 0) {
+      const xData = [];
+      const yData = [];
+      setXAxisData([...xData]);
+      setYAxisData([...yData]);
+      setMessage("Client Tank Capacity(%)");
+      const updatedOptions = { ...options };
+      updatedOptions.subtitle.text = "No Data Found";
       updatedOptions.xAxis[0].categories = xData;
       updatedOptions.series[0].data = yData;
       console.log("updatedOption", updatedOptions);
@@ -200,7 +281,9 @@ function LineChart(props) {
   } else {
     return (
       <Fragment>
-        <HighchartsReact highcharts={Highcharts} options={options} />
+        <div className="line-chart">
+          <HighchartsReact highcharts={Highcharts} options={options} />
+        </div>
       </Fragment>
     );
   }

@@ -1,6 +1,8 @@
 import React, { Fragment, useState } from "react";
 import Heading from "../Heading";
 import ContentCard from "../ContentCard";
+import Highcharts from "highcharts/highstock";
+import PieChart from "highcharts-react-official";
 import dropGreen from "../../assets/images/drop-green.png";
 import dropYellow from "../../assets/images/drop-yellow.png";
 import dropRed from "../../assets/images/drop-slashred.png";
@@ -22,6 +24,11 @@ import { useQuery } from "@apollo/react-hooks";
 import Loader from "../Loader";
 import { set } from "lodash";
 import { useEffect } from "react";
+import CanvasJSReact from "../../canvasjs.react";
+
+//var CanvasJSReact = require('./canvasjs.react');
+var CanvasJS = CanvasJSReact.CanvasJS;
+var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 const userId = localStorage.getItem("userId");
 let totalGatewayGraphs = gql`
   query graphsgraphsData($id: Int) {
@@ -162,17 +169,11 @@ let totalGraphs = gql`
     }
   }
 `;
-function FullCard({
-  selectedTank,
-  selectedTypeGateway,
-  handleGraphTankClick,
-  parentCallBack,
-}) {
+function FullCard({ selectedTank, selectedTypeGateway, parentCallBack }) {
   const tankId = selectedTank;
   let finalGraph;
   const selectedGateway = selectedTypeGateway;
-  const { gatewayPath, setGatewayPath } = useState(0);
-  console.log("selectedGateway", selectedGateway);
+  // console.log("selectedGateway", selectedGateway);
   if (selectedGateway == "GatewayLocation") {
     finalGraph = totalGatewayGraphs;
   } else {
@@ -189,44 +190,275 @@ function FullCard({
 
   if (loadingGraphs || !graphsData)
     return (
-      <p>
+      <div>
         <Loader />
-      </p>
+      </div>
     );
 
-  console.log("tank", graphsData.locationEntry);
-  console.log("offlineGateway", graphsData.locationEntry.offlineGateways);
+  // console.log("tank", graphsData.locationEntry);
+  // console.log("offlineGateway", graphsData.locationEntry.offlineGateways);
   if (errorGraphs) return console.log("Failed to fetch");
-  console.log(
-    "path full chart color",
-    Math.round(
-      ((graphsData.locationEntry.totalGateways.totalCount -
-        graphsData.locationEntry.offlineGateways.totalCount) /
-        graphsData.locationEntry.totalGateways.totalCount) *
-        100
-    )
-  );
-  console.log(
-    "offline %",
-    Math.round(
-      (graphsData.locationEntry.offlineGateways.totalCount * 100) /
-        graphsData.locationEntry.totalGateways.totalCount
-    )
-  );
-  console.log(
-    Math.round(
-      (graphsData.locationEntry.offlineGateways.totalCount * 100) /
-        graphsData.locationEntry.totalGateways.totalCount
-    )
-  );
-  // useEffect(() => {
-  //   const progressGatewayPath =
-  //     ((graphsData.locationEntry.totalGateways.totalCount -
-  //       graphsData.locationEntry.offlineGateways.totalCount) /
-  //       graphsData.locationEntry.totalGateways.totalCount) *
-  //     100;
-  //   setGatewayPath(progressGatewayPath);
-  // }, [setGatewayPath]);
+
+  //const options = {
+  //  animationEnabled: true,
+  //  title: {
+  //    // text: "Customer Satisfaction"
+  //  },
+  //  // subtitles: [
+  //  //   {
+  //  //     //text: "71% Positive",
+
+  //  //     fontSize: 24,
+  //  //   },
+  //  // ],
+  //  title: {
+  //    fontSize: 30,
+  //  },
+  //  height: 200,
+  //  data: [
+  //    {
+  //      type: "pie",
+  //      indexLabel: "{name}: {count}",
+  //      yValueFormatString: "#,###'%'",
+  //      dataPoints: [
+  //        {
+  //          name: "below 30%",
+  //              color: "#ff6d00",
+  //              count: graphsData
+  //                  ? graphsData.locationEntry
+  //                      ? graphsData.locationEntry.tanksBelow30.totalCount
+  //                      :""
+  //                  : "0",
+  //          y: graphsData
+  //            ? graphsData.locationEntry
+  //              ? (graphsData.locationEntry.tanksBelow30.totalCount * 100) /
+  //                graphsData.locationEntry.totalTanks.totalCount
+  //              : ""
+  //            : "0",
+  //        },
+
+  //        {
+  //          name: "below 10%",
+
+  //            color: "#e02020",
+  //            count: graphsData
+  //                ? graphsData.locationEntry
+  //                    ? graphsData.locationEntry.tanksBelow10.totalCount
+  //                    : ""
+  //                : "0",
+  //          y: graphsData
+  //            ? graphsData.locationEntry
+  //              ? (graphsData.locationEntry.tanksBelow10.totalCount * 100) /
+  //                graphsData.locationEntry.totalTanks.totalCount
+  //              : ""
+  //            : "0",
+  //        },
+
+  //        {
+  //          name: "above 30%",
+  //            color: "#90c822",
+  //            count: graphsData
+  //                ? graphsData.locationEntry
+  //                    ? graphsData.locationEntry.tanksAbove30.totalCount
+  //                    : ""
+  //                : "0",
+  //          y: graphsData
+  //            ? graphsData.locationEntry
+  //              ? (graphsData.locationEntry.tanksAbove30.totalCount * 100) /
+  //                graphsData.locationEntry.totalTanks.totalCount
+  //              : "0"
+  //            : "0",
+  //        },
+  //      ],
+  //    },
+  //  ],
+  //};
+
+  //var chart = $('#container').highcharts();
+  //var seriesLength = chart.series.length;
+  //for (var i = seriesLength - 1; i > -1; i--) {
+  //    //chart.series[i].remove();
+  //    if (chart.series[i].name == document.getElementById("series_name").value)
+  //        chart.series[i].remove();
+  //}
+  const options = {
+    title: {
+      text: "",
+    },
+    chart: {
+      type: "pie",
+      // renderTo: "tank_pieChart",
+      // margin: [0, 0, 0, 0],
+      // spacingTop: 0,
+      // spacingBottom: 0,
+      // spacingLeft: 0,
+      // spacingRight: 0,
+      // showInLegend: false,
+    },
+    legend: {
+      enabled: false,
+    },
+
+    chartOptions: { height: 200 },
+    series: [
+      {
+        // tooltip: {
+        //   pointFormat: "",
+        //   fontSize: "60px",
+        // },
+        tooltip: {
+          pointFormat: "",
+          style: {
+            color: "blue",
+            fontWeight: "bold",
+          },
+        },
+        plotOptions: {
+          pie: {
+            size: 200,
+            height: "100%",
+          },
+          hover: {
+            pie: {
+              size: 200,
+            },
+          },
+        },
+        dataLabels: {
+          enabled: false,
+        },
+        cursor: "pointer",
+        data: [
+          {
+            //name: "",
+
+            events: {
+              click: function () {
+                parentCallBack("Below 30%");
+              },
+            },
+
+            color: "#f7b500",
+            key: "Below 30%",
+            name: graphsData
+              ? graphsData.locationEntry
+                ? graphsData.locationEntry.tanksBelow30.totalCount
+                : ""
+              : "0",
+            y: graphsData
+              ? graphsData.locationEntry
+                ? graphsData.locationEntry.tanksBelow30.totalCount
+                : ""
+              : "0",
+          },
+          {
+            // name: "",
+            events: {
+              click: function () {
+                parentCallBack("Below 10%");
+              },
+            },
+            color: "#e02020",
+            key: "Below 10%",
+            name: graphsData
+              ? graphsData.locationEntry
+                ? graphsData.locationEntry.tanksBelow10.totalCount
+                : ""
+              : "0",
+            y: graphsData
+              ? graphsData.locationEntry
+                ? graphsData.locationEntry.tanksBelow10.totalCount
+                : ""
+              : "0",
+          },
+          {
+            // name: "",
+            events: {
+              click: function () {
+                parentCallBack("Above 30%");
+              },
+            },
+            color: "#90c822",
+            key: "Above 30%",
+            name: graphsData
+              ? graphsData.locationEntry
+                ? graphsData.locationEntry.tanksAbove30.totalCount
+                : ""
+              : "0",
+            y: graphsData
+              ? graphsData.locationEntry
+                ? graphsData.locationEntry.tanksAbove30.totalCount
+                : "0"
+              : "0",
+          },
+        ],
+      },
+    ],
+  };
+  const optionsForZero = {
+    title: {
+      text: "",
+    },
+    chart: {
+      type: "pie",
+
+      showInLegend: false,
+    },
+    legend: {
+      enabled: false,
+    },
+    chartOptions: { height: 200 },
+    series: [
+      {
+        // tooltip: {
+        //   pointFormat: "",
+        //   fontSize: "60px",
+        // },
+        tooltip: {
+          pointFormat: "",
+          style: {
+            color: "blue",
+            fontWeight: "bold",
+          },
+        },
+        plotOptions: {
+          pie: {
+            size: 200,
+            height: "100%",
+          },
+          hover: {
+            pie: {
+              size: 200,
+            },
+          },
+          click: {
+            pie: {
+              size: 200,
+            },
+          },
+        },
+        dataLabels: {
+          enabled: false,
+        },
+
+        data: [
+          {
+            // name: "",
+            color: "#bebebe",
+            name: "No  data",
+            y: 2,
+          },
+          {
+            // name: "",
+            color: "#90c822",
+            name: "No  data",
+            y: 0,
+          },
+        ],
+      },
+    ],
+  };
+
   return (
     <div>
       <Fragment>
@@ -252,62 +484,100 @@ function FullCard({
                   }
                 />
                 <div className="Progress_wrapper">
-                  <AnimatedTank
-                    graphStyle
-                    lostpercentage
-                    percentage={
-                      graphsData
-                        ? graphsData.locationEntry
-                          ? graphsData.locationEntry.tanksAbove30.totalCount
-                          : "0"
-                        : "0"
-                    }
-                    duration={1.4}
-                    easingFunction={easeQuadInOut}
-                    image={dropGreen}
-                    percntgStatus="above 30%"
-                    onClick={() => {
-                      parentCallBack("Above 30%");
-                    }}
-                  />
-                  <AnimatedTank
-                    graphStyle
-                    lostpercentage
-                    strokeColor="tankBelow30"
-                    percentage={
-                      graphsData
-                        ? graphsData.locationEntry
-                          ? graphsData.locationEntry.tanksBelow30.totalCount
-                          : ""
-                        : "0"
-                    }
-                    duration={1.4}
-                    easingFunction={easeQuadInOut}
-                    image={dropYellow}
-                    percntgStatus="below 30%"
-                    onClick={() => {
-                      parentCallBack("Below 30%");
-                    }}
-                  />
-                  <AnimatedTank
-                    graphStyle
-                    lostpercentage
-                    strokeColor="tankBelow10"
-                    percentage={
-                      graphsData
-                        ? graphsData.locationEntry
-                          ? graphsData.locationEntry.tanksBelow10.totalCount
-                          : ""
-                        : "0"
-                    }
-                    duration={1.4}
-                    easingFunction={easeQuadInOut}
-                    image={dropRed}
-                    percntgStatus="below 10%"
-                    onClick={() => {
-                      parentCallBack("Below 10%");
-                    }}
-                  />
+                  <div className="tank_pieChart">
+                    {graphsData.locationEntry.totalTanks.totalCount != 0 && (
+                      <PieChart
+                        highcharts={Highcharts}
+                        options={options}
+                        // style="height: 600px;"
+                      />
+                    )}
+                    ,
+                    {graphsData.locationEntry.totalTanks.totalCount == 0 && (
+                      <PieChart
+                        highcharts={Highcharts}
+                        options={optionsForZero}
+                        // style="height: 600px;"
+                      />
+                    )}
+                  </div>
+                  <div className="client_tank--count">
+                    <ul>
+                      {
+                        <li>
+                          {/* <span className="dot"></span> */}
+                          <img
+                            className="tanks__count--drop"
+                            src={dropGreen}
+                            alt="tank_drop"
+                          />
+                          <a
+                            onClick={() => {
+                              parentCallBack("Above 30%");
+                            }}
+                          >
+                            {" "}
+                            Above 30% -{" "}
+                            {graphsData
+                              ? graphsData.locationEntry
+                                ? graphsData.locationEntry.tanksAbove30
+                                    .totalCount
+                                : ""
+                              : "0"}
+                          </a>
+                        </li>
+                      }
+
+                      {
+                        <li>
+                          {/* <span className="dot"></span> */}
+                          <img
+                            className="tanks__count--drop"
+                            src={dropYellow}
+                            alt="tank_drop"
+                          />
+                          <a
+                            onClick={() => {
+                              parentCallBack("Below 30%");
+                            }}
+                          >
+                            {" "}
+                            Below 30% -{" "}
+                            {graphsData
+                              ? graphsData.locationEntry
+                                ? graphsData.locationEntry.tanksBelow30
+                                    .totalCount
+                                : ""
+                              : "0"}
+                          </a>
+                        </li>
+                      }
+                      {
+                        <li>
+                          {/* <span className="dot"></span> */}
+                          <img
+                            className="tanks__count--drop"
+                            src={dropRed}
+                            alt="tank_drop"
+                          />
+                          <a
+                            onClick={() => {
+                              parentCallBack("Below 10%");
+                            }}
+                          >
+                            {" "}
+                            Below 10% -{" "}
+                            {graphsData
+                              ? graphsData.locationEntry
+                                ? graphsData.locationEntry.tanksBelow10
+                                    .totalCount
+                                : ""
+                              : "0"}
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  </div>
                 </div>
               </div>,
             ]}
@@ -352,19 +622,40 @@ function FullCard({
                             : 0
                           : 0
                       }
+                      trailColor={
+                        graphsData
+                          ? graphsData.locationEntry
+                            ? graphsData.locationEntry.offlineGateways
+                              ? graphsData.locationEntry.offlineGateways
+                                  .totalCount != null
+                                ? graphsData.locationEntry.totalGateways
+                                    .totalCount
+                                  ? "var(--color-parrot)"
+                                  : "var(--color-lightgrey)"
+                                : "var(--color-lightgrey)"
+                              : "var(--color-lightgrey)"
+                            : "var(--color-lightgrey)"
+                          : "var(--color-lightgrey)"
+                      }
                       pathColor={
-                        graphsData.locationEntry.offlineGateways.totalCount !=
-                        null
-                          ? Math.round(
-                              (graphsData.locationEntry.offlineGateways
-                                .totalCount *
-                                100) /
-                                graphsData.locationEntry.totalGateways
-                                  .totalCount
-                            )
-                            ? "var(--color-red)"
-                            : "var(--color-parrot)"
-                          : "transparent"
+                        graphsData
+                          ? graphsData.locationEntry
+                            ? graphsData.locationEntry.offlineGateways
+                              ? graphsData.locationEntry.offlineGateways
+                                  .totalCount != null
+                                ? Math.round(
+                                    (graphsData.locationEntry.offlineGateways
+                                      .totalCount *
+                                      100) /
+                                      graphsData.locationEntry.totalGateways
+                                        .totalCount
+                                  )
+                                  ? "var(--color-red)"
+                                  : "var(--color-lightgrey)"
+                                : "var(--color-lightgrey)"
+                              : "var(--color-lightgrey)"
+                            : "var(--color-lightgrey)"
+                          : "var(--color-lightgrey)"
                       }
                       strokeColor="gatewayStroke"
                       duration={1.4}
@@ -395,7 +686,7 @@ function FullCard({
                       percentage={
                         graphsData
                           ? graphsData.locationEntry
-                            ? graphsData.locationEntry.totalGateways
+                            ? graphsData.locationEntry.offlineTanks
                               ? Math.round(
                                   (graphsData.locationEntry.offlineTanks
                                     .totalCount *
@@ -416,36 +707,41 @@ function FullCard({
                             : "0"
                           : "0"
                       }
-                      trailColor={
-                        graphsData.locationEntry.offlineTanks.totalCount != null
-                          ? graphsData.locationEntry.totalTanks.totalCount
-                            ? "var(--color-parrot)"
-                            : "transparent"
-                          : 0
-                      }
                       pathColor={
-                        graphsData.locationEntry.offlineTanks.totalCount != null
-                          ? Math.round(
-                              (graphsData.locationEntry.offlineTanks
-                                .totalCount *
-                                100) /
-                                graphsData.locationEntry.totalTanks.totalCount
-                            )
-                            ? "var(--color-red)"
-                            : "transparent"
-                          : 0
+                        graphsData
+                          ? graphsData.locationEntry
+                            ? graphsData.locationEntry.offlineTanks
+                              ? graphsData.locationEntry.offlineTanks
+                                  .totalCount != null
+                                ? Math.round(
+                                    (graphsData.locationEntry.offlineTanks
+                                      .totalCount *
+                                      100) /
+                                      graphsData.locationEntry.totalTanks
+                                        .totalCount
+                                  )
+                                  ? "var(--color-red)"
+                                  : "var(--color-lightgrey"
+                                : "var(--color-lightgrey)"
+                              : "var(--color-lightgrey)"
+                            : "var(--color-lightgrey)"
+                          : "var(--color-lightgrey)"
                       }
-                      // pathColor={
-                      //   graphsData.locationEntry.offlineTanks.totalCount != null
-                      //     ? Math.round(
-                      //         graphsData.locationEntry.totalTanks.totalCount -
-                      //           graphsData.locationEntry.offlineTanks.totalCount
-                      //       )
-                      //       ? "var(--color-parrot)"
-                      //       : "var(--color-transparent)"
-                      //     : 0
-                      // }
-                      strokeColor="gatewayStroke"
+                      trailColor={
+                        graphsData
+                          ? graphsData.locationEntry
+                            ? graphsData.locationEntry.offlineTanks
+                              ? graphsData.locationEntry.totalTanks
+                                  .totalCount != null
+                                ? graphsData.locationEntry.totalTanks.totalCount
+                                  ? "var(--color-parrot)"
+                                  : "var(--color-lightgrey)"
+                                : "var(--color-lightgrey)"
+                              : "var(--color-lightgrey)"
+                            : "var(--color-lightgrey)"
+                          : "var(--color-lightgrey)"
+                      }
+                      strokeColor="sensorStroke"
                       duration={1.4}
                       easingFunction={easeQuadInOut}
                       image={wifiRed}
@@ -478,20 +774,25 @@ function FullCard({
                     </p>
                     <AnimatedInventory
                       percentage={
-                        graphsData.locationEntry
-                          ? (graphsData.locationEntry.bulk.aggregate
-                              .sum_levelGallons /
-                              graphsData.locationEntry.bulk.aggregate
-                                .sum_capacityGallons) *
-                            100
-                          : "0"
+                        graphsData.locationEntry != null
+                          ? graphsData.locationEntry.bulk.aggregate
+                              .sum_levelGallons === 0
+                            ? 0
+                            : (graphsData.locationEntry.bulk.aggregate
+                                .sum_levelGallons /
+                                graphsData.locationEntry.bulk.aggregate
+                                  .sum_capacityGallons) *
+                              100
+                          : 0
                       }
                       duration={1.4}
                       strokeColor="bulkStroke"
                       count={
                         graphsData.locationEntry
-                          ? graphsData.locationEntry.bulk.aggregate
-                              .sum_capacityGallons
+                          ? Math.round(
+                              graphsData.locationEntry.bulk.aggregate
+                                .sum_capacityGallons
+                            ).toLocaleString()
                           : "0"
                       }
                       easingFunction={easeQuadInOut}
@@ -519,8 +820,10 @@ function FullCard({
                       strokeColor="clientStroke"
                       count={
                         graphsData.locationEntry
-                          ? graphsData.locationEntry.client.aggregate
-                              .sum_capacityGallons
+                          ? Math.round(
+                              graphsData.locationEntry.client.aggregate
+                                .sum_capacityGallons
+                            ).toLocaleString()
                           : "0"
                       }
                       duration={1.4}

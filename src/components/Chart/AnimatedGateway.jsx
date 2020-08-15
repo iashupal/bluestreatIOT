@@ -28,7 +28,7 @@ class AnimatedGateway extends React.Component {
       strokeDashoffset,
       count,
     } = this.props;
-    console.log("pathcolor", pathColor);
+
     return (
       <Animate
         start={() => ({

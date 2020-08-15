@@ -2,14 +2,13 @@ import React, { Component } from "react";
 import { Table, Progress, Popover, Input, Button, Card, Select } from "antd";
 import { DatePicker } from "antd";
 import moment from "moment";
-
 import Pagination from "react-js-pagination";
 import fileExport from "../../assets/images/file-export-white.png";
 import filter from "../../assets/images/filter-blue.png";
 import { gql } from "apollo-boost";
 import { Query, graphql } from "react-apollo";
-import { CSVLink } from "react-csv";
 import Loader from "../Loader";
+import QueryExport from "../QueryExport";
 import "../TankTable/index.css";
 import "./clientHistory.css";
 import "../../../node_modules/antd/dist/antd.compact.css";
@@ -18,7 +17,12 @@ const { Option } = Select;
 
 const { RangePicker } = DatePicker;
 const tankDetailExport = gql`
-  query tankTableData($id: Int, $first: Int, $filter: QueryFilterEntry) {
+  query tankTableData(
+    $id: Int
+    $first: Int
+    $after: String
+    $filter: QueryFilterEntry
+  ) {
     tank(id: $id) {
       id
       parent {
@@ -32,12 +36,17 @@ const tankDetailExport = gql`
       }
       readings(
         first: $first
+        after: $after
 
         sortDirection: desc
         sortBy: timestamp
         filter: [$filter]
       ) {
         totalCount
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
 
         edges {
           node {
@@ -105,7 +114,6 @@ const tankDetail = gql`
     }
   }
 `;
-var csvData = "";
 
 class ClientHistoryTable extends Component {
   constructor(props) {
@@ -118,7 +126,6 @@ class ClientHistoryTable extends Component {
       filtered: false,
       filters: {},
       formVisible: false,
-      csvData: [],
       tankHistory: [],
       adlevelvalue: "",
       adlevelOp: "",
@@ -129,9 +136,9 @@ class ClientHistoryTable extends Component {
       levelGallonOp: "",
       pageCount: 1,
       pageCursor: 1,
-      pagesize: 50,
+      pagesize: 100,
       activePage: 1,
-      docsCount: 10,
+      docsCount: 50,
       totalDocsCount: 0,
       selectedTankId: "",
       dateDiff: "",
@@ -139,6 +146,13 @@ class ClientHistoryTable extends Component {
       newEndDate: "",
       newStartDate: "",
       tankHistoryData: {},
+      filterLevelPercent: "Select tank status",
+      filterLevelGallon: "Select level gallons",
+      filterDates: [],
+      paginationDisableBtn: false,
+      currentPage: 1,
+      TotalPage: 0,
+      currentPageSize: 50,
     };
 
     this.submitFilters = this.submitFilters.bind(this);
@@ -147,7 +161,7 @@ class ClientHistoryTable extends Component {
     this.showForm = this.showForm.bind(this);
     this.hideForm = this.hideForm.bind(this);
     this.exportDrawer = this.exportDrawer.bind(this);
-    this.setCSV = this.setCSV.bind(this);
+    this.formatCSV = this.formatCSV.bind(this);
     // this.handlePrevPage = this.handlePrevPage.bind(this);
     // this.handleNextPage = this.handleNextPage.bind(this);
 
@@ -163,18 +177,20 @@ class ClientHistoryTable extends Component {
           }
         },
         defaultSortOrder: "descend",
-        sortDirections: ["ascend", "descend"],
+        sortDirections: ["ascend", "descend", "ascend"],
         key: "tankDetail.node.timestamp",
         dataIndex: "timestamp",
         render: (text, record) => (
           <span>
-            {record ? moment(record.node.timestamp).format("YYYY-MM-DD") : ""}
+            {record
+              ? moment.utc(record.node.timestamp).format("YYYY-MM-DD HH:mm")
+              : ""}
           </span>
         ),
       },
       {
         title: "Tank Status",
-        sortDirections: ["ascend", "descend"],
+        sortDirections: ["ascend", "descend", "ascend"],
         sorter: (a, b) => {
           if (
             (a.node ? a.node.levelPercent * 100 : "") <
@@ -208,7 +224,7 @@ class ClientHistoryTable extends Component {
       },
       {
         title: "Current Level",
-        sortDirections: ["ascend", "descend"],
+        sortDirections: ["ascend", "descend", "ascend"],
         sorter: (a, b) =>
           a
             ? a.node.levelGallons === null
@@ -221,7 +237,7 @@ class ClientHistoryTable extends Component {
             {record
               ? record.node.levelGallons === null
                 ? "0 "
-                : Math.round(record.node.levelGallons)
+                : Math.round(record.node.levelGallons).toLocaleString()
               : ""}{" "}
             G
           </span>
@@ -229,7 +245,7 @@ class ClientHistoryTable extends Component {
       },
       {
         title: "Refill Potential Gallons.",
-        sortDirections: ["ascend", "descend"],
+        sortDirections: ["ascend", "descend", "ascend"],
         sorter: (a, b) => {
           if (
             (a.node ? a.node.refillPotentialGallons * 100 : "") <
@@ -246,7 +262,9 @@ class ClientHistoryTable extends Component {
             {record
               ? record.node.refillPotentialGallons === null
                 ? "0"
-                : Math.round(record.node.refillPotentialGallons)
+                : Math.round(
+                    record.node.refillPotentialGallons
+                  ).toLocaleString()
               : ""}{" "}
             G
           </span>
@@ -254,7 +272,7 @@ class ClientHistoryTable extends Component {
       },
       {
         title: "Temp",
-        sortDirections: ["ascend", "descend"],
+        sortDirections: ["ascend", "descend", "ascend"],
         sorter: (a, b) => {
           if (
             (a.node ? a.node.temperatureCelsius * 100 : "") <
@@ -281,7 +299,7 @@ class ClientHistoryTable extends Component {
       },
       {
         title: "Battery",
-        sortDirections: ["ascend", "descend"],
+        sortDirections: ["ascend", "descend", "ascend"],
         sorter: (a, b) => {
           if (
             (a.node ? a.node.batteryVoltage : "") <
@@ -338,8 +356,10 @@ class ClientHistoryTable extends Component {
     this.updateFiltersFromState();
     this.setState({
       filtered: true,
+      // showFilterBtn: true,
     });
   }
+
   clearFilters() {
     this.setState(
       {
@@ -353,6 +373,9 @@ class ClientHistoryTable extends Component {
         endDate: "",
         levelGallonOp: "",
         dateDiff: "",
+        filterLevelPercent: "Select tank status",
+        filterLevelGallon: "Select level gallons",
+        filterDates: [],
       },
       () => {
         this.props.clearGraph();
@@ -360,173 +383,321 @@ class ClientHistoryTable extends Component {
     );
   }
   updateFiltersFromState = () => {
-    let filtercondition = this.state.filtercondition;
-    console.log("adlevelValue", this.state.adlevelvalue);
-    if (!this.state.filtered) {
-      // console.log("enter inot filter condn", filters);
-      if (this.state.adlevelvalue != "") {
-        console.log("adlevelValue----", this.state.adlevelvalue);
+    var filtercondition = [];
 
-        // filtercondition = {
-        //   levelPercent: {
-        //     op: this.state.adlevelOp,
-        //     v: this.state.adlevelvalue,
-        //   },
-        // };
-        if (
-          this.state.adlevelvalue === "0.80" &&
-          this.state.adlevelOp === "<="
-        ) {
-          filtercondition = [
+    if (this.state.adlevelvalue != "") {
+      if (this.state.adlevelvalue === "0.80" && this.state.adlevelOp === "<=") {
+        filtercondition.push({
+          levelPercent: {
+            op: this.state.adlevelOp,
+            v: this.state.adlevelvalue,
+          },
+        });
+        filtercondition.push({ levelPercent: { op: ">=", v: ".30" } });
+      } else if (
+        this.state.adlevelvalue === "0.30" &&
+        this.state.adlevelOp === "<"
+      ) {
+        filtercondition.push({
+          _or: [
             {
               levelPercent: {
                 op: this.state.adlevelOp,
                 v: this.state.adlevelvalue,
               },
             },
-
-            { levelPercent: { op: ">=", v: ".30" } },
-          ];
-        } else if (
-          this.state.adlevelvalue === "0.30" &&
-          this.state.adlevelOp === "<"
-        ) {
-          filtercondition = [
+            { levelPercent: { op: "isNull" } },
+          ],
+        });
+      } else if (
+        this.state.adlevelvalue === "0.10" &&
+        this.state.adlevelOp === "<"
+      ) {
+        filtercondition.push({
+          _or: [
             {
               levelPercent: {
                 op: this.state.adlevelOp,
                 v: this.state.adlevelvalue,
               },
             },
-            { levelPercent: { op: ">=", v: "0.10" } },
-          ];
-        } else if (
-          this.state.adlevelvalue === "0.10" &&
-          this.state.adlevelOp === "<"
-        ) {
-          filtercondition = {
-            _or: [
-              {
-                levelPercent: {
-                  op: this.state.adlevelOp,
-                  v: this.state.adlevelvalue,
-                },
-              },
-              { levelPercent: { op: "isNull" } },
-            ],
-          };
-        } else {
-          filtercondition = {
-            levelPercent: {
-              op: this.state.adlevelOp,
-              v: this.state.adlevelvalue,
-            },
-          };
-        }
-      } else if (this.state.startDate != "" && this.state.endDate != "") {
-        let dateFilterDiff = this.state.dateFilterDiff;
-        if (!moment.isMoment(this.state.startDate))
-          this.state.startDate = moment(this.state.startDate);
-        if (!moment.isMoment(this.state.endDate))
-          this.state.endDate = moment(this.state.endDate);
-        dateFilterDiff = this.state.endDate.diff(
-          this.state.startDate,
-          "months"
-        );
-        console.log(
-          "date diff b/w start and end date",
-          this.state.startDate,
-          this.state.endDate
-        );
-        console.log("dateFilterDiff", dateFilterDiff);
-        if (dateFilterDiff <= 13) {
-          filtercondition = [
+            { levelPercent: { op: "isNull" } },
+          ],
+        });
+      } else {
+        filtercondition.push({
+          _or: [
             {
-              timestamp: {
-                op: ">=",
-                v: this.state.startDate,
+              levelPercent: {
+                op: this.state.adlevelOp,
+                v: this.state.adlevelvalue,
               },
             },
-            {
-              timestamp: {
-                op: "<=",
-                v: this.state.endDate,
-              },
+          ],
+        });
+      }
+      console.log("filterCOndition", filtercondition);
+    }
+
+    if (this.state.startDate != "" && this.state.endDate != "") {
+      let dateFilterDiff = this.state.dateFilterDiff;
+      if (!moment.isMoment(this.state.startDate))
+        this.state.startDate = moment(this.state.startDate);
+      if (!moment.isMoment(this.state.endDate))
+        this.state.endDate = moment(this.state.endDate);
+      dateFilterDiff = this.state.endDate.diff(this.state.startDate, "months");
+      console.log(
+        "date diff b/w start and end date",
+        this.state.startDate,
+        this.state.endDate
+      );
+      console.log("dateFilterDiff", dateFilterDiff);
+
+      if (dateFilterDiff <= 13) {
+        filtercondition.push(
+          {
+            timestamp: {
+              op: ">=",
+              v: moment(this.state.startDate).format("YYYY-MM-DD"),
             },
-          ];
-        } else if (
-          dateFilterDiff > 13 &&
-          this.state.endDate != "" &&
-          this.state.startDate != ""
-        ) {
-          console.log("date filter diff---------", dateFilterDiff);
-          let newEndDate = this.state.endDate.format("YYYY-MM-DD");
-          this.state.endDate = newEndDate;
-          console.log("new end date ********", this.state.endDate);
-          console.log(
-            "new start date ********-----------",
-            this.state.startDate
-          );
-          if (this.state.endDate) {
-            this.state.endDate = moment(this.state.endDate);
-            //this.state.endDate = this.state.endDate.subtract(
-            //  dateFilterDiff - 13,
-            //  "months"
-            //);
-            this.state.startDate = this.state.endDate.subtract(13, "months");
-            this.state.startDate = this.state.startDate.format("YYYY-MM-DD");
+          },
+          {
+            timestamp: {
+              op: "<=",
+              v: moment(this.state.endDate).format("YYYY-MM-DD"),
+            },
           }
-          this.state.endDate = newEndDate;
-          console.log("newEndDate//////", this.state.endDate);
-
-          filtercondition = [
-            {
-              timestamp: {
-                op: ">=",
-                v: this.state.startDate,
-              },
-            },
-            {
-              timestamp: {
-                op: "<=",
-                v: this.state.endDate,
-              },
-            },
-          ];
+        );
+      } else if (
+        dateFilterDiff > 13 &&
+        this.state.endDate != "" &&
+        this.state.startDate != ""
+      ) {
+        console.log("date filter diff---------", dateFilterDiff);
+        let newEndDate = this.state.endDate.format("YYYY-MM-DD");
+        this.state.endDate = newEndDate;
+        // console.log("new end date ********", this.state.endDate);
+        // console.log("new start date ********-----------", this.state.startDate);
+        if (this.state.endDate) {
+          this.state.endDate = moment(this.state.endDate);
+          //this.state.endDate = this.state.endDate.subtract(
+          //  dateFilterDiff - 13,
+          //  "months"
+          //);
+          this.state.startDate = this.state.endDate.subtract(13, "months");
+          this.state.startDate = this.state.startDate.format("YYYY-MM-DD");
         }
+        this.state.endDate = newEndDate;
+        console.log("newEndDate//////", this.state.endDate);
+
+        filtercondition.push(
+          {
+            timestamp: {
+              op: ">=",
+              v: moment(this.state.startDate).format("YYYY-MM-DD"),
+            },
+          },
+          {
+            timestamp: {
+              op: "<=",
+              v: moment(this.state.endDate).format("YYYY-MM-DD"),
+            },
+          }
+        );
 
         console.log("filtered date-----", filtercondition);
-      } else if (
-        this.state.levelGallonValue != "" &&
-        this.state.levelGallonOp != ""
-      ) {
-        filtercondition = {
-          levelGallons: {
-            op: this.state.levelGallonOp,
-            v: this.state.levelGallonValue,
-          },
-        };
       }
     }
+
+    if (this.state.levelGallonValue != "" && this.state.levelGallonOp != "") {
+      filtercondition.push({
+        levelGallons: {
+          op: this.state.levelGallonOp,
+          v: this.state.levelGallonValue,
+        },
+      });
+    }
+
+    console.log("levelGallonFilterCondition", filtercondition);
+
     this.setState({ filtercondition });
 
     console.log("filter condtn", filtercondition);
-    if (
-      this.state.startDate != "" &&
-      this.state.endDate != "" &&
-      this.checkThreeMonthData(
-        this.state.startDate,
-        this.state.endDate
-        // this.state.newEndDate
-      )
-    ) {
-      this.props.updateParent(
-        filtercondition,
+    if (this.state.startDate != "" && this.state.endDate != "") {
+      var dateDiff = this.checkThreeMonthData(
         this.state.startDate,
         this.state.endDate
         // this.state.newEndDate
       );
+      // console.log(dateDiff);
+      this.state.dateDiff = dateDiff;
+      this.props.updateParent(
+        filtercondition,
+        this.state.startDate,
+        this.state.endDate,
+        this.state.dateDiff
+        // this.state.newEndDate
+      );
     }
+
+    //let filtercondition = this.state.filtercondition;
+    //console.log("adlevelValue", this.state.adlevelvalue);
+
+    //// console.log("enter inot filter condn", filters);
+    //if (this.state.adlevelvalue != "") {
+    //  console.log("adlevelValue----", this.state.adlevelvalue);
+
+    //  // filtercondition = {
+    //  //   levelPercent: {
+    //  //     op: this.state.adlevelOp,
+    //  //     v: this.state.adlevelvalue,
+    //  //   },
+    //  // };
+    //  if (this.state.adlevelvalue === "0.80" && this.state.adlevelOp === "<=") {
+    //    filtercondition = [
+    //      {
+    //        levelPercent: {
+    //          op: this.state.adlevelOp,
+    //          v: this.state.adlevelvalue,
+    //        },
+    //      },
+
+    //      { levelPercent: { op: ">=", v: ".30" } },
+    //    ];
+    //  } else if (
+    //    this.state.adlevelvalue === "0.30" &&
+    //    this.state.adlevelOp === "<"
+    //  ) {
+    //    filtercondition = [
+    //      {
+    //        levelPercent: {
+    //          op: this.state.adlevelOp,
+    //          v: this.state.adlevelvalue,
+    //        },
+    //      },
+    //      { levelPercent: { op: ">=", v: "0.10" } },
+    //    ];
+    //  } else if (
+    //    this.state.adlevelvalue === "0.10" &&
+    //    this.state.adlevelOp === "<"
+    //  ) {
+    //    filtercondition = {
+    //      _or: [
+    //        {
+    //          levelPercent: {
+    //            op: this.state.adlevelOp,
+    //            v: this.state.adlevelvalue,
+    //          },
+    //        },
+    //        { levelPercent: { op: "isNull" } },
+    //      ],
+    //    };
+    //  } else {
+    //    filtercondition = {
+    //      levelPercent: {
+    //        op: this.state.adlevelOp,
+    //        v: this.state.adlevelvalue,
+    //      },
+    //    };
+    //  }
+    //} else if (this.state.startDate != "" && this.state.endDate != "") {
+    //  let dateFilterDiff = this.state.dateFilterDiff;
+    //  if (!moment.isMoment(this.state.startDate))
+    //    this.state.startDate = moment(this.state.startDate);
+    //  if (!moment.isMoment(this.state.endDate))
+    //      this.state.endDate = moment(this.state.endDate).add(1, 'd');
+    //  dateFilterDiff = this.state.endDate.diff(this.state.startDate, "months");
+    //  console.log(
+    //    "date diff b/w start and end date",
+    //    this.state.startDate,
+    //    this.state.endDate
+    //  );
+    //  console.log("dateFilterDiff", dateFilterDiff);
+    //  if (dateFilterDiff <= 13) {
+    //    filtercondition = [
+    //      {
+    //        timestamp: {
+    //          op: ">=",
+    //          v: moment(this.state.startDate).format("YYYY-MM-DD"),
+    //        },
+    //      },
+    //      {
+    //        timestamp: {
+    //          op: "<=",
+    //          v: moment(this.state.endDate).format("YYYY-MM-DD"),
+    //        },
+    //      },
+    //    ];
+    //  } else if (
+    //    dateFilterDiff > 13 &&
+    //    this.state.endDate != "" &&
+    //    this.state.startDate != ""
+    //  ) {
+    //    console.log("date filter diff---------", dateFilterDiff);
+    //    let newEndDate = this.state.endDate.format("YYYY-MM-DD");
+    //    this.state.endDate = newEndDate;
+    //    console.log("new end date ********", this.state.endDate);
+    //    console.log("new start date ********-----------", this.state.startDate);
+    //    if (this.state.endDate) {
+    //      this.state.endDate = moment(this.state.endDate);
+    //      //this.state.endDate = this.state.endDate.subtract(
+    //      //  dateFilterDiff - 13,
+    //      //  "months"
+    //      //);
+    //      this.state.startDate = this.state.endDate.subtract(13, "months");
+    //      this.state.startDate = this.state.startDate.format("YYYY-MM-DD");
+    //    }
+    //    this.state.endDate = newEndDate;
+    //    console.log("newEndDate//////", this.state.endDate);
+
+    //    filtercondition = [
+    //      {
+    //        timestamp: {
+    //          op: ">=",
+    //          v: moment(this.state.startDate).format("YYYY-MM-DD"),
+    //        },
+    //      },
+    //      {
+    //        timestamp: {
+    //          op: "<=",
+    //          v: moment(this.state.endDate).format("YYYY-MM-DD"),
+    //        },
+    //      },
+    //    ];
+    //  }
+
+    //  console.log("filtered date-----", filtercondition);
+    //} else if (
+    //  this.state.levelGallonValue != "" &&
+    //  this.state.levelGallonOp != ""
+    //) {
+    //  filtercondition = {
+    //    levelGallons: {
+    //      op: this.state.levelGallonOp,
+    //      v: this.state.levelGallonValue,
+    //    },
+    //  };
+    //}
+
+    //this.setState({ filtercondition });
+
+    //console.log("filter condtn", filtercondition);
+    //if (this.state.startDate != "" && this.state.endDate != "") {
+    //  var dateDiff = this.checkThreeMonthData(
+    //    this.state.startDate,
+    //    this.state.endDate
+    //    // this.state.newEndDate
+    //  );
+    //  console.log(dateDiff);
+    //  this.state.dateDiff = dateDiff;
+    //  this.props.updateParent(
+    //    filtercondition,
+    //    this.state.startDate,
+    //    this.state.endDate,
+    //    this.state.dateDiff
+    //    // this.state.newEndDate
+    //  );
+    //}
   };
   checkThreeMonthData(startDate, endDate) {
     // check if gap of start and end date is more than 3 months then retun true otherwise false
@@ -536,26 +707,28 @@ class ClientHistoryTable extends Component {
       endDate = moment(endDate);
     }
     dateDiff = endDate.diff(startDate, "months");
-    console.log("new filter start date", startDate);
-    console.log("new filter end data", endDate);
-    console.log("date difference", dateDiff);
-    if (dateDiff > 3) {
-      return true;
-    } else {
-      return false;
-    }
+    // console.log("new filter start date", startDate);
+    // console.log("new filter end data", endDate);
+    // console.log("date difference", dateDiff);
+    //if (dateDiff > 3) {
+    //  return true;
+    //} else {
+    //  return false;
+    //}
+    return dateDiff;
   }
   updateFilter(type, value) {
     switch (type) {
       case "levelPercent":
+        this.state.filterLevelPercent = value;
         var op = "",
           levelValue = "";
-        console.log("enter function");
-        console.log("option selected", value);
+        // console.log("enter function");
+        // console.log("option selected", value);
         if (value === "below10") {
           op = "<";
           levelValue = "0.10";
-          console.log("below 10");
+          // console.log("below 10");
         } else if (value === "below30") {
           op = "<";
           levelValue = "0.30";
@@ -574,63 +747,78 @@ class ClientHistoryTable extends Component {
         });
         break;
       case "timestamp":
-        console.log("select date", value);
-
-        this.setState({
-          startDate: moment(value[0]).format("YYYY-MM-DD"),
-          endDate: moment(value[1]).format("YYYY-MM-DD"),
-          showFilterBtn: true,
-        });
+        // console.log("select date", value);
+        this.state.filterDates = value;
+        if (value != null) {
+          this.setState({
+            startDate: moment(value[0]).format("YYYY-MM-DD"),
+            endDate: moment(value[1]).format("YYYY-MM-DD"),
+            showFilterBtn: true,
+          });
+        } else {
+          this.setState({
+            showFilterBtn: true,
+          });
+        }
+        // console.log("filterDates", this.state.filterDates);
         break;
       case "levelGallons":
-        console.log("level gallons", value);
+        this.state.filterLevelGallon = value;
+        // console.log("level gallons", value);
         let levelGallonOperator = value;
         this.setState({
           levelGallonOp: levelGallonOperator,
-
           showFilterBtn: true,
         });
-        console.log("level gallons", levelGallonOperator);
-        console.log("input value", this.state.levelGallonValue);
+        // console.log("level gallons", levelGallonOperator);
+        // console.log("input value", this.state.levelGallonValue);
         break;
       default:
         console.log("Error");
     }
 
-    console.log("tag state", value);
-    console.log("level value-----", levelValue);
-    console.log("level op----", op);
-    console.log("level value state", this.state.adlevelvalue);
-    console.log("level op state", this.state.adlevelOp);
+    // console.log("tag state", value);
+    // console.log("level value-----", levelValue);
+    // console.log("level op----", op);
+    // console.log("level value state", this.state.adlevelvalue);
+    // console.log("level op state", this.state.adlevelOp);
   }
 
-  setCSV(data) {
-    console.log(1);
+  formatCSV(queryResult) {
     let entryHistory = [];
+
+    const data = queryResult.tank.readings.edges;
     data.map((item) => {
       entryHistory.push({
-        Date: moment(item.node.timestamp).format("YYYY-MM-DD"),
-        TankStatus:
-          item.node.levelPercent != null ? item.node.levelPercent * 100 : 0,
-        CurrentLevel: item.node.levelGallons
-          ? Math.round(item.node.levelGallons) + " " + "G"
+        Date: moment.utc(item.node.timestamp).format("YYYY-MM-DD HH:mm"),
+        "Tank Status (%)":
+          item.node.levelPercent != null
+            ? Math.round(item.node.levelPercent * 100)
+            : 0,
+        "Current Level (G)": item.node.levelGallons
+          ? Math.round(item.node.levelGallons).toLocaleString()
           : "0",
-        RefillPotentialGallons: item.node.refillPotentialGallons
-          ? Math.round(item.node.refillPotentialGallons) + " " + "G"
+        "Refill Potential Gallons (G)": item.node.refillPotentialGallons
+          ? Math.round(item.node.refillPotentialGallons).toLocaleString()
           : "0",
-        Temperature: item.node.temperatureCelsius
-          ? (item.node.temperatureCelsius * 1.8 + 32).toFixed(1) + " " + "F"
+        "Temperature Celsius (C)": item.node.temperatureCelsius
+          ? item.node.temperatureCelsius.toFixed(1)
           : "0",
-        Battery: item.node.batteryVoltage
-          ? item.node.batteryVoltage + " " + "V"
+        "Temperature Fehrenheit (F)": item.node.temperatureCelsius
+          ? (item.node.temperatureCelsius * 1.8 + 32).toFixed(1)
+          : "0",
+        "Battery (V)": item.node.batteryVoltage
+          ? item.node.batteryVoltage
           : "0",
       });
       return 0;
     });
-    csvData = entryHistory;
-    console.log("entryHistory", csvData);
+    return entryHistory;
   }
 
+  passTankData(tankData) {
+    // this.props.fetchTankData(tankData);
+  }
   // // Function to update the query with the new results
   updateQuery = (previousResult, { fetchMoreResult }) => {
     return fetchMoreResult.posts.edges.length
@@ -644,25 +832,19 @@ class ClientHistoryTable extends Component {
       filtered,
       filters,
       showFilterBtn,
-      startDate,
-      endDate,
       levelGallonValue,
       levelGallonOp,
-      pageCount,
-      pageCursor,
       pagesize,
-      activePage,
-      docsCount,
-      totalDocsCount,
       filtercondition,
       dateDiff,
       selectedTankId,
       dateFilterDiff,
-      newGraphOneDay,
-      newGraphCurrentDate,
+      filterLevelPercent,
       tankHistoryData,
+      filterLevelGallon,
+      filterDates,
+      paginationDisableBtn,
     } = this.state;
-    console.log("Csv===", csvData);
     return (
       <div className="clientHistoryTank_table">
         <Query
@@ -687,20 +869,27 @@ class ClientHistoryTable extends Component {
             if (error) {
               return console.log(JSON.stringify(error));
             } else if (data) {
-              csvData = data.tank.readings.edges;
-              console.log("tank history", data);
-              console.log("tank history", data.tank.readings.totalCount);
-              console.log("csvData", csvData);
-              this.setCSV(data.tank.readings.edges);
+              // console.log("tank history", data);
+              // console.log("tank history", data.tank.readings.totalCount);
               if (
                 String(this.state.selectedTankId) !==
                 String(this.props.selectedTankId)
               )
                 this.setState({
-                  tankHistoryData: { ...data.tank },
+                  tankHistoryData: { ...data.tank.readings },
                   selectedTankId: this.props.selectedTankId,
                 });
-              console.log("tankHistoryData", tankHistoryData);
+              if (data.tank.readings.totalCount % 50 == 0) {
+                this.state.TotalPage =
+                  data.tank.readings.totalCount / this.state.currentPageSize;
+              } else {
+                this.state.TotalPage =
+                  ~~(
+                    data.tank.readings.totalCount / this.state.currentPageSize
+                  ) + 1;
+              }
+              // console.log("tankHistoryData", tankHistoryData);
+              this.passTankData(tankHistoryData);
               return (
                 data &&
                 data.tank && (
@@ -716,15 +905,22 @@ class ClientHistoryTable extends Component {
                       }
                       extra={[
                         <Popover
-                          // trigger="click"
+                          trigger="click"
                           content={
                             <div className="history__filter--popover">
                               <p>Tank Status : </p>
                               <Select
+                                showSearch
                                 style={{ width: "100%" }}
-                                placeholder="Status"
+                                placeholder="Select tank status"
+                                value={filterLevelPercent}
                                 onChange={(value) =>
                                   this.updateFilter("levelPercent", value)
+                                }
+                                filterOption={(input, option) =>
+                                  option.children
+                                    .toLowerCase()
+                                    .indexOf(input.toLowerCase()) >= 0
                                 }
                               >
                                 <Option value={"below10"}>Below 10%</Option>
@@ -736,6 +932,7 @@ class ClientHistoryTable extends Component {
                               <br />
                               <p>Select Date Range : </p>
                               <RangePicker
+                                value={filterDates}
                                 onChange={(value) =>
                                   this.updateFilter("timestamp", value)
                                 }
@@ -746,7 +943,8 @@ class ClientHistoryTable extends Component {
                               <div className="select_gallonWrapper">
                                 <Select
                                   style={{ width: "100%" }}
-                                  placeholder="level gallons"
+                                  placeholder="Select level gallons"
+                                  value={filterLevelGallon}
                                   onChange={(value) =>
                                     this.updateFilter("levelGallons", value)
                                   }
@@ -775,20 +973,29 @@ class ClientHistoryTable extends Component {
                               </div>
                               <br />
                               <br />
-                              <Button
-                                className="history_filterBtn"
-                                style={{ width: "100%" }}
-                                type={filtered ? "danger" : "primary"}
-                                onClick={
-                                  filtered
-                                    ? this.clearFilters
-                                    : this.submitFilters
+                              <div className="historyFilterBtns_wrapper">
+                                {
+                                  <Button
+                                    className="history_filterBtn"
+                                    style={{ width: "100%" }}
+                                    type="primary"
+                                    onClick={() => this.submitFilters()}
+                                    disabled={showFilterBtn === false}
+                                    // disabled={Object.keys(filters).length === 0}
+                                  >
+                                    Apply
+                                  </Button>
                                 }
-                                disabled={showFilterBtn === false}
-                                // disabled={Object.keys(filters).length === 0}
-                              >
-                                {filtered ? "Clear filters" : "Filter"}
-                              </Button>
+                                <Button
+                                  className="history_filterBtn"
+                                  style={{ width: "100%" }}
+                                  type="danger"
+                                  onClick={this.clearFilters}
+                                  disabled={showFilterBtn === false}
+                                >
+                                  Reset
+                                </Button>
+                              </div>
                             </div>
                           }
                           placement="bottom"
@@ -809,92 +1016,70 @@ class ClientHistoryTable extends Component {
                             Filter
                           </Button>
                         </Popover>,
-                        // <Query
-                        //   query={tankDetailExport}
-                        //   variables={{
-                        //     id: this.props.selectedTankId,
-                        //     filter: this.state.filtercondition,
-                        //     first: 5000,
-                        //   }}
-                        // >
-                        //   {({ data, error, loading }) => {
-                        //     if (loading) {
-                        //       return (
-                        //         <div>
-                        //           <Loader />
-                        //         </div>
-                        //       );
-                        //     }
-                        //     if (error) {
-                        //       return console.log(JSON.stringify(error));
-                        //     } else if (data) {
-                        //       csvData = data.tank.readings.edges;
-                        //       console.log("tank history", data);
-                        //       console.log(
-                        //         "tank history",
-                        //         data.tank.readings.totalCount
-                        //       );
-                        //       console.log("csvData", csvData);
-                        //       this.setCSV(data.tank.readings.edges);
-                        //       if (
-                        //         String(this.state.selectedTankId) !==
-                        //         String(this.props.selectedTankId)
-                        //       )
-                        //         this.setState({
-                        //           tankHistoryData: {
-                        //             ...data.tank.readings.edges,
-                        //           },
-                        //           selectedTankId: this.props.selectedTankId,
-                        //         });
-                        //       console.log("tankHistoryData", tankHistoryData);
-                        //       return (
-                        //         data &&
-                        //         data.tank && (
-                        <CSVLink
-                          data={csvData}
-                          filename={`tank_History-${data.tank.id}-${moment(
-                            new Date()
-                          ).format("YYYY-MM-DD")}.csv`}
-                        >
-                          <Button
-                            size="large"
-                            className="client_export--btn"
-                            icon={
-                              <img
-                                className="icons"
-                                src={fileExport}
-                                alt="print"
-                              />
+                        <div>
+                          <QueryExport
+                            query={tankDetailExport}
+                            variables={{
+                              id: this.props.selectedTankId,
+                              filter: this.state.filtercondition,
+                              first: 1000,
+                            }}
+                            formatCSV={this.formatCSV}
+                            getPageInfo={(data) =>
+                              data.tank.readings.pageInfo.endCursor
                             }
-                            type="primary"
+                            filename={`tank_History-${data.tank.id}-${moment(
+                              new Date()
+                            ).format("YY-MM-DD HH:mm")}.csv`}
                           >
-                            Export
-                          </Button>
-                        </CSVLink>,
-                        //         )
-                        //       );
-                        //     }
-                        //   }}
-                        // </Query>,
+                            <Button
+                              size="large"
+                              className="client_export--btn"
+                              icon={
+                                <img
+                                  className="icons"
+                                  src={fileExport}
+                                  alt="export"
+                                />
+                              }
+                              type="primary"
+                            >
+                              Export
+                            </Button>
+                          </QueryExport>
+                        </div>,
                       ]}
                     >
                       <Table
                         dataSource={data.tank.readings.edges}
                         columns={this.columns}
                         size="small"
-                        pagination={true}
-                      />
+                        pagination={{ defaultPageSize: 50 }}
+                        // scroll={{ y: "100vh" }}
+                        // pagination={true}
+                        onChange={(e) => {
+                          const { endCursor } = data.tank.readings.pageInfo;
 
-                      <div style={{ textAlign: "center" }}>
-                        {data.tank.readings.totalCount >
-                          data.tank.readings.edges.length && (
-                          <Button
-                            type="primary"
-                            size="medium"
-                            className="tank__loadmore"
-                            onClick={() => {
-                              const { endCursor } = data.tank.readings.pageInfo;
-                              console.log(endCursor);
+                          if (data.tank.readings.totalCount % e.pageSize == 0) {
+                            this.setState({
+                              currentPage: e.current,
+                              TotalPage:
+                                data.tank.readings.totalCount / e.pageSize,
+                              currentPageSize: e.pageSize,
+                            });
+                          } else {
+                            this.setState({
+                              currentPage: e.current,
+                              TotalPage:
+                                data.tank.readings.totalCount / e.pageSize + 1,
+                              currentPageSize: e.pageSize,
+                            });
+                          }
+
+                          {
+                            Object.keys(tankHistoryData.edges).length /
+                              e.pageSize ==
+                              e.current &&
                               fetchMore({
                                 variables: {
                                   after: endCursor,
@@ -903,32 +1088,42 @@ class ClientHistoryTable extends Component {
                                   prevResult,
                                   { fetchMoreResult }
                                 ) => {
-                                  console.log("prevResult", prevResult);
-                                  console.log(
-                                    "fetchMoreResult",
-                                    fetchMoreResult
-                                  );
+                                  // console.log("prevResult", prevResult);
+                                  // console.log(
+                                  //   "fetchMoreResult",
+                                  //   fetchMoreResult
+                                  // );
+
                                   fetchMoreResult.tank.readings.edges = [
                                     ...prevResult.tank.readings.edges,
                                     ...fetchMoreResult.tank.readings.edges,
                                   ];
+
                                   this.setState({
                                     tankHistoryData: {
                                       ...tankHistoryData,
+
                                       edges: [
                                         ...fetchMoreResult.tank.readings.edges,
+                                        // ...newArray,
                                       ],
                                     },
+                                    paginationDisableBtn: false,
                                   });
+                                  // console.log("enable btn");
+
                                   return fetchMoreResult;
                                 },
                               });
-                            }}
-                          >
-                            Load more..
-                          </Button>
-                        )}
-                      </div>
+                          }
+                        }}
+                      />
+                      <h4 className="pagination__pageCount">
+                        {" "}
+                        Page [{this.state.currentPage} / {this.state.TotalPage}]
+                        of {data.tank.readings.totalCount} Records{" "}
+                      </h4>
+
                       {/* <div className="tab_alerts tank_alerts">
                         <span>
                           <i className="fas fa-exclamation-triangle"></i>

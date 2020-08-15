@@ -1,5 +1,7 @@
 import React from "react";
 import "./styles.css";
+import Highcharts from "highcharts/highstock";
+import PieChart from "highcharts-react-official";
 
 function SubTabs({ text, selected, onClick, styleName }) {
   return (

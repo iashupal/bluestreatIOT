@@ -87,19 +87,19 @@ class AdvancedSearchForm extends Component {
       advanceReset: false,
       tempadvanceReset: false,
       events: {},
-      file: null,
-      advancedTab: 0,
+        file: null,
+        advancedTab: JSON.parse(localStorage.getItem("advanceTab")),
       filterTab: "",
       tagValue: "",
-      tagValue1: "",
-      tagValue2: "",
-      tagValue3: "",
-      tagValue4: "",
-      serchtxt: "",
+        tagValue1: localStorage.getItem("tankStatus"),
+        tagValue2: localStorage.getItem("adAlert"),
+        tagValue3: localStorage.getItem("adSensor"),
+        tagValue4: localStorage.getItem("adTankSiveOP"),
+        serchtxt: localStorage.getItem("adserchtxt"),
       id: 0,
       saveSearchName: "",
       sizeValue: 0,
-      levelGallonValue: 0,
+        levelGallonValue: localStorage.getItem("adTankSiveV"),
       savedSearches: {},
       tempdata: {
         client: "Test New",
@@ -107,28 +107,39 @@ class AdvancedSearchForm extends Component {
       },
       disableSearch: true,
       IsSaveSearch: false,
+        viewArray: [],
+        IsSearchButton: JSON.parse(localStorage.getItem("IsSearchButton")),
+        saveSearchesDate: localStorage.getItem("saveSearchesDate"),
+        FilterArray: JSON.parse(localStorage.getItem("filterArray"))
     };
   }
   resetSearch() {
     this.setState({ tempadvanceReset: true });
 
-    console.log("anjali");
     this.setState({ serchtxt: "" });
     this.state.tagValue = "";
     this.state.tagValue1 = "";
     this.state.tagValue2 = "";
     this.state.tagValue3 = "";
     this.state.tagValue4 = "";
+    this.state.FilterArray = [];
     this.state.levelGallonValue = 0;
     // this.state.serchtxt= this.props.initialvalue
     this.state.filterTab = "";
+      this.state.IsSearchButton = false;
+      localStorage.setItem("IsSearchButton", JSON.parse(false));
+      this.props.clearAdvance();
+      this.state.advancedTab = 0;
+      this.state.saveSearchesDate = "";
   }
 
   savetogglePopup() {
     if (this.state.saveSearchName == "" && this.state.showPopup == true) {
     } else {
+      setInterval(console.log("timer"), 1000);
       this.setState({
         showPopup: !this.state.showPopup,
+        advancedTab: 1,
       });
     }
   }
@@ -155,9 +166,27 @@ class AdvancedSearchForm extends Component {
       this.state.tagValue2,
       this.state.tagValue3,
       this.state.levelGallonValue,
-      this.state.tagValue4
+      this.state.tagValue4,
+      this.state.FilterArray
     );
   }
+
+  clearValue() {
+    this.setState({ serchtxt: "" });
+    this.state.tagValue = "";
+    this.state.tagValue1 = "";
+    this.state.tagValue2 = "";
+    this.state.tagValue3 = "";
+    this.state.tagValue4 = "";
+    this.state.levelGallonValue = 0;
+    // this.state.serchtxt= this.props.initialvalue
+    this.state.filterTab = "";
+    this.state.FilterArray = [];
+    this.props.clearFilter();
+      this.callfetchValue();
+      this.state.saveSearchesDate=""
+  }
+
   saveAdvance() {
     this.updateFiltersFromProps(
       this.state.serchtxt,
@@ -188,6 +217,8 @@ class AdvancedSearchForm extends Component {
     )
       this.state.disableSearch = true;
     let { currentId } = this.props;
+    let { typeName } = this.props;
+    let { saveDescription } = this.props;
     var filtercondition1 = [];
 
     var op = "",
@@ -206,53 +237,70 @@ class AdvancedSearchForm extends Component {
       value = "0.80";
     }
     if (serchtxt != "")
-      filtercondition1.push({
-        description: { op: "match", v: this.state.serchtxt },
-      });
+        filtercondition1.push({
+            _or: [
+                {
+                    description: {
+                        op: "match",
+                        v: serchtxt,
+                    },
+                },
+                { description: { op: "=", v: serchtxt } }
+            ]
+        }
+      );
 
     if (tankStatus != "") {
-      if (value === "0.80" && op === "<=") {
-        filtercondition1.push(
-          {
-            levelPercent: {
-              op: op,
-              v: value,
-            },
-          },
-          {
-            levelPercent: {
-              op: ">=",
-              v: ".30",
-            },
-          }
-        );
-      } else if (value === "0.10" && op === "<") {
-        filtercondition1.push({
-          levelPercent: {
-            op: op,
-            v: value,
-          },
-        });
-        filtercondition1.push({
-          levelPercent: { op: "isNull" },
-        });
+        if (value === "0.80" && op === "<=") {
+            filtercondition1.push(
+                {
+                    levelPercent: {
+                        op: op,
+                        v: value,
+                    },
+                },
+                {
+                    levelPercent: {
+                        op: ">=",
+                        v: ".30",
+                    },
+                }
+            );
+        } else if (value === "0.10" && op === "<") {
+            filtercondition1.push({
+                _or: [
+                    {
+                        levelPercent: {
+                            op: op,
+                            v: value,
+                        },
+                    },
+                    {
+                levelPercent: { op: "isNull" },
+            }
+        ]});
       } else if (value === "0.30" && op === "<") {
-        filtercondition1.push({
-          levelPercent: {
-            op: op,
-            v: value,
-          },
-        });
-        filtercondition1.push({
-          levelPercent: { op: "isNull" },
-        });
+        filtercondition1.push(
+            {
+                _or: [
+                    {
+                        levelPercent: {
+                            op: op,
+                            v: value,
+                        },
+                    },
+                    { levelPercent: { op: "isNull" } },
+                ]
+            });
       } else
-        filtercondition1.push({
-          levelPercent: {
-            op: op,
-            v: value,
-          },
-        });
+            filtercondition1.push({
+                _or: [
+                    {
+                        levelPercent: {
+                            op: op,
+                            v: value,
+                        },
+                    }]});
     }
 
     if (alert == "High") {
@@ -281,12 +329,14 @@ class AdvancedSearchForm extends Component {
 
     console.log("this.state.temp", this.state.temp);
     var tempSaveSerches = [];
-    if (value === "0.80" && op === "<=") {
+      if ((value === "0.80" && op === "<=") || (value === "0.30" && op === "<" && serchtxt != "") || (value === "0.10" && op === "<" && serchtxt != "") || (value === "0.80" && op === ">" && serchtxt != "") ) {
       tempSaveSerches.push({
         filter: filtercondition1,
         id: currentId,
         date: new Date(),
         name: this.state.saveSearchName,
+        typename: typeName,
+        description: saveDescription,
       });
     } else {
       tempSaveSerches.push({
@@ -296,16 +346,18 @@ class AdvancedSearchForm extends Component {
         id: currentId,
         date: new Date(),
         name: this.state.saveSearchName,
+        typename: typeName,
+        description: saveDescription,
       });
     }
-    if (this.state.temp.length != undefined) {
+    if (this.state.temp != null && this.state.temp.length != undefined) {
       this.state.temp.forEach(function (entry, index) {
         console.log("index", index, entry);
         var searchvar = [];
         searchvar = entry;
 
         Object.values(searchvar).forEach(function (element, index) {
-          if (index <= 9) tempSaveSerches.push(element);
+          if (index < 9) tempSaveSerches.push(element);
         });
       });
     }
@@ -314,34 +366,343 @@ class AdvancedSearchForm extends Component {
 
     this.setState({
       savedSearches: tempSaveSerches,
-      //    {
-      //    searches3: {
-      //        filter: {
-      //            _or: filtercondition1
-      //        },
-      //        id: currentId,
-      //        date: new Date()
-      //        },
-      //    searches4: {
-      //        filter: {
-      //             _or: filtercondition1
-      //        },
-      //        id: currentId,
-      //        date: new Date()
-      //        }
-      //}
     });
   }
   getName = (saveSearchName) => {
     this.setState({ saveSearchName }, function () {
-      console.log("tagValue4", saveSearchName);
+      console.log("saveSearches", saveSearchName);
       this.saveAdvance();
     });
   };
 
-  searchBySave(filter, id) {
+  searchBySave(filter, id, typename, description, date) {
+      this.state.IsSearchButton = true;
+      localStorage.setItem("saveSearchesDate", date);
+      localStorage.setItem("IsSearchButton", true);
+      localStorage.setItem("advanceTab", JSON.stringify(1));
+    this.state.saveSearchesDate = date;
     this.state.IsSaveSearch = true;
-    this.props.fetchSaveValue(filter, id);
+    console.log("filter", filter);
+      var tempFilterResult = [];
+      if (filter._or != undefined) {
+          Object.values(filter._or).forEach(function (entry, index) {
+              console.log("entry", Object.keys(entry));
+              if (Object.keys(entry) == "_or") {
+                  Object.values(entry._or).forEach(function (entry1, index) {
+                      if (Object.keys(entry1) == "description") {
+                          if (entry1.description.op == "match")
+                              tempFilterResult.push({
+                                  name: "Description",
+                                  value: entry1.description.v,
+                              });
+                      }
+                      if (Object.keys(entry1) == "levelPercent") {
+                          if (entry1.levelPercent.op == ">") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Above 80%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<" && entry1.levelPercent.v == "0.10") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Below 10%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<" && entry1.levelPercent.v == "0.30") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Below 30%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<=") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "30% to 80%",
+                              });
+                          }
+                      }
+                  })
+              }
+              if (Object.keys(entry) == "highAlarmCnt") {
+                  tempFilterResult.push({ name: "Alerts", value: "High" });
+              }
+              if (Object.keys(entry) == "mediumAlarmCnt") {
+                  tempFilterResult.push({
+                      name: "Alerts",
+                      value: "Medimum",
+                  });
+              }
+              if (Object.keys(entry) == "alarmingTypes") {
+                  if (entry.alarmingTypes.op == "in") {
+                      tempFilterResult.push({
+                          name: "Sensor",
+                          value: "Offline",
+                      });
+                  }
+                  if (entry.alarmingTypes.op == "not in") {
+                      tempFilterResult.push({
+                          name: "Sensor",
+                          value: "Online",
+                      });
+                  }
+              }
+              if (Object.keys(entry) == "capacityGallons") {
+                  tempFilterResult.push({
+                      name: "Tank Size",
+                      value: entry.capacityGallons.op,
+                  });
+              }
+              if (Object.keys(entry) == "levelPercent") {
+                  if (entry.levelPercent.op == ">") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "Above 80%",
+                      });
+                  }
+                  if (entry.levelPercent.op == "<" && entry.levelPercent.v == "0.10") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "Below 10%",
+                      });
+                  }
+                  if (entry.levelPercent.op == "<" && entry.levelPercent.v == "0.30") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "Below 30%",
+                      });
+                  }
+                  if (entry.levelPercent.op == "<=") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "30% to 80%",
+                      });
+                  }
+              }
+              if (Object.keys(entry) == "description") {
+                  if (entry.description.op == "match")
+                      tempFilterResult.push({
+                          name: "Description",
+                          value: entry.description.v,
+                      });
+              }
+          });
+      }
+      else if (Object.values(filter).length == 1) {
+          Object.values(filter).forEach(function (entry1, index) {
+              //console.log("entry", Object.keys(entry));
+              Object.values(entry1).forEach(function (entry, index) {
+                  if (Object.keys(entry) == "highAlarmCnt") {
+                      tempFilterResult.push({ name: "Alerts", value: "High" });
+                  }
+                  if (Object.keys(entry) == "mediumAlarmCnt") {
+                      tempFilterResult.push({
+                          name: "Alerts",
+                          value: "Medimum",
+                      });
+                  }
+                  if (Object.keys(entry) == "alarmingTypes") {
+                      if (entry.alarmingTypes.op == "in") {
+                          tempFilterResult.push({
+                              name: "Sensor",
+                              value: "Offline",
+                          });
+                      }
+                      if (entry.alarmingTypes.op == "not in") {
+                          tempFilterResult.push({
+                              name: "Sensor",
+                              value: "Online",
+                          });
+                      }
+                  }
+                  if (Object.keys(entry) == "capacityGallons") {
+                      tempFilterResult.push({
+                          name: "Tank Size",
+                          value: entry.capacityGallons.op,
+                      });
+                  }
+                  if (Object.keys(entry) == "levelPercent") {
+                      if (entry.levelPercent.op == ">") {
+                          tempFilterResult.push({
+                              name: "Tank Status",
+                              value: "Above 80%",
+                          });
+                      }
+                      if (entry.levelPercent.op == "<" && entry.levelPercent.v == "0.10") {
+                          tempFilterResult.push({
+                              name: "Tank Status",
+                              value: "Below 10%",
+                          });
+                      }
+                      if (entry.levelPercent.op == "<" && entry.levelPercent.v == "0.30") {
+                          tempFilterResult.push({
+                              name: "Tank Status",
+                              value: "Below 30%",
+                          });
+                      }
+                      if (entry.levelPercent.op == "<=") {
+                          tempFilterResult.push({
+                              name: "Tank Status",
+                              value: "30% to 80%",
+                          });
+                      }
+                  }
+                  if (Object.keys(entry) == "description") {
+                      if (entry.description.op == "match")
+                          tempFilterResult.push({
+                              name: "Description",
+                              value: entry.description.v,
+                          });
+                  }
+              });
+          });
+      }
+      else {
+          Object.values(filter).forEach(function (entry, index) {
+              if (Object.values(entry).length > 1) {
+                  Object.values(entry).forEach(function (entry1, index) {
+                      if (Object.keys(entry1) == "levelPercent") {
+                          if (entry1.levelPercent.op == ">") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Above 80%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<" && entry1.levelPercent.v == "0.10") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Below 10%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<" && entry1.levelPercent.v == "0.30") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Below 30%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<=") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "30% to 80%",
+                              });
+                          }
+                      }
+                  });
+              }
+
+              if (entry._or != undefined) {
+                  Object.values(entry._or).forEach(function (entry1, index) {
+                      if (Object.keys(entry1) == "levelPercent") {
+                          if (entry1.levelPercent.op == ">") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Above 80%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<" && entry1.levelPercent.v == "0.10") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Below 10%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<" && entry1.levelPercent.v == "0.30") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "Below 30%",
+                              });
+                          }
+                          if (entry1.levelPercent.op == "<=") {
+                              tempFilterResult.push({
+                                  name: "Tank Status",
+                                  value: "30% to 80%",
+                              });
+                          }
+                      }
+                      if (Object.keys(entry1) == "description") {
+                          if (entry1.description.op == "match")
+                              tempFilterResult.push({
+                                  name: "Description",
+                                  value: entry1.description.v,
+                              });
+                      }
+                  });
+              }
+              console.log("entry", Object.keys(entry));
+
+              if (Object.keys(entry) == "highAlarmCnt") {
+                  tempFilterResult.push({ name: "Alerts", value: "High" });
+              }
+              if (Object.keys(entry) == "mediumAlarmCnt") {
+                  tempFilterResult.push({
+                      name: "Alerts",
+                      value: "Medimum",
+                  });
+              }
+              if (Object.keys(entry) == "alarmingTypes") {
+                  if (entry.alarmingTypes.op == "in") {
+                      tempFilterResult.push({
+                          name: "Sensor",
+                          value: "Offline",
+                      });
+                  }
+                  if (entry.alarmingTypes.op == "not in") {
+                      tempFilterResult.push({
+                          name: "Sensor",
+                          value: "Online",
+                      });
+                  }
+              }
+              if (Object.keys(entry) == "capacityGallons") {
+                  tempFilterResult.push({
+                      name: "Tank Size",
+                      value: entry.capacityGallons.op,
+                  });
+              }
+              if (Object.keys(entry) == "levelPercent") {
+                  if (entry.levelPercent.op == ">") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "Above 80%",
+                      });
+                  }
+                  if (entry.levelPercent.op == "<" && entry.levelPercent.v =="0.10") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "Below 10%",
+                      });
+                  }
+                  if (entry.levelPercent.op == "<" && entry.levelPercent.v == "0.30") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "Below 30%",
+                      });
+                  }
+                  if (entry.levelPercent.op == "<=") {
+                      tempFilterResult.push({
+                          name: "Tank Status",
+                          value: "30% to 80%",
+                      });
+                  }
+              }
+              if (Object.keys(entry) == "description") {
+                  if (entry.description.op == "match")
+                      tempFilterResult.push({
+                          name: "Description",
+                          value: entry.description.v,
+                      });
+              }
+          });
+      }
+
+    this.state.FilterArray = tempFilterResult;
+    console.log("tempFilterResult", this.state.FilterArray);
+    this.props.fetchSaveValue(
+      filter,
+      id,
+      typename,
+      description,
+      this.state.FilterArray
+    );
   }
   SavingAdvanceSearch() {
     // console.closeTag("Ad", "SavingAdvanceSearch");
@@ -349,19 +710,80 @@ class AdvancedSearchForm extends Component {
   }
   searchTextfromAdvanceTab(searchtext) {
     this.setState({ serchtxt: searchtext });
+    let i = 0;
+    let isInclude = false;
+    for (i = 0; i < this.state.FilterArray.length; i++) {
+      if (this.state.FilterArray[i].name == "Description") break;
+    }
+    if (this.state.FilterArray.length > 0 && i != this.state.FilterArray.length)
+      isInclude = true;
+    if (isInclude == false) {
+      this.state.FilterArray.push({
+        name: "Description",
+        value: searchtext,
+      });
+    } else {
+      this.state.FilterArray[i].name = "Description";
+      this.state.FilterArray[i].value = searchtext;
+      }
+
+      if (searchtext == "") {
+          let i = 0;
+          if ((this.state.FilterArray.length == 1)) this.state.FilterArray = [];
+          else {
+              for (i = 0; i < this.state.FilterArray.length; i++) {
+                  if (this.state.FilterArray[i].name == "Description") break;
+              }
+              this.state.FilterArray.splice(i, 1);
+          }
+      }
     this.saveAdvance();
   }
   showTagChip = (tagValue) => {
     console.log(1);
     this.state.disableSearch = false;
     this.setState({ tagValue, tagVisible: !this.state.tagVisible });
+    let i = 0;
+    let isInclude = false;
+    for (i = 0; i < this.state.FilterArray.length; i++) {
+      if (this.state.FilterArray[i].name == "Commodity Type") break;
+    }
+    if (this.state.FilterArray.length > 0 && i != this.state.FilterArray.length)
+      isInclude = true;
+    if (tagValue === "Propane" && isInclude == false) {
+      this.state.FilterArray.push({
+        name: "Commodity Type",
+        value: tagValue,
+      });
+    } else {
+      this.state.FilterArray[i].name = "Commodity Type";
+      this.state.FilterArray[i].value = tagValue;
+    }
     if (this.state.tagValue === "Propane") {
       $("#dvPropane").removeClass("activeSelectedTag");
     }
+
     $("#dvPropane").addClass("activeSelectedTag");
   };
   showTagstatus = (tagValue1) => {
     console.log(1);
+    let i = 0;
+    let isInclude = false;
+    for (i = 0; i < this.state.FilterArray.length; i++) {
+      if (this.state.FilterArray[i].name == "Tank Status") break;
+    }
+    if (this.state.FilterArray.length > 0 && i != this.state.FilterArray.length)
+      isInclude = true;
+    if (isInclude == false) {
+      this.state.FilterArray.push({
+        name: "Tank Status",
+        value: tagValue1,
+      });
+    } else {
+      this.state.FilterArray[i].name = "Tank Status";
+      this.state.FilterArray[i].value = tagValue1;
+    }
+
     this.setState({ tagValue1 }, function () {
       this.saveAdvance();
       console.log("tagValue1", tagValue1);
@@ -370,6 +792,22 @@ class AdvancedSearchForm extends Component {
   };
   showTagAlerts = (tagValue2) => {
     console.log(2);
+    let i = 0;
+    let isInclude = false;
+    for (i = 0; i < this.state.FilterArray.length; i++) {
+      if (this.state.FilterArray[i].name == "Alerts") break;
+    }
+    if (this.state.FilterArray.length > 0 && i != this.state.FilterArray.length)
+      isInclude = true;
+    if (isInclude == false) {
+      this.state.FilterArray.push({
+        name: "Alerts",
+        value: tagValue2,
+      });
+    } else {
+      this.state.FilterArray[i].name = "Alerts";
+      this.state.FilterArray[i].value = tagValue2;
+    }
     this.setState({ tagValue2 }, function () {
       this.saveAdvance();
       console.log("tagValue2", tagValue2);
@@ -379,6 +817,22 @@ class AdvancedSearchForm extends Component {
   };
   showTagSensor = (tagValue3) => {
     console.log(3);
+    let i = 0;
+    let isInclude = false;
+    for (i = 0; i < this.state.FilterArray.length; i++) {
+      if (this.state.FilterArray[i].name == "Sensor") break;
+    }
+    if (this.state.FilterArray.length > 0 && i != this.state.FilterArray.length)
+      isInclude = true;
+    if (isInclude == false) {
+      this.state.FilterArray.push({
+        name: "Sensor",
+        value: tagValue3,
+      });
+    } else {
+      this.state.FilterArray[i].name = "Sensor";
+      this.state.FilterArray[i].value = tagValue3;
+    }
     this.setState({ tagValue3 }, function () {
       this.saveAdvance();
       console.log("tagValue3", tagValue3);
@@ -387,12 +841,52 @@ class AdvancedSearchForm extends Component {
   };
   showTagSize = (tagValue4) => {
     console.log(1);
+    let i = 0;
+    let isInclude = false;
+    for (i = 0; i < this.state.FilterArray.length; i++) {
+      if (this.state.FilterArray[i].name == "Tank Size") break;
+    }
+    if (this.state.FilterArray.length > 0 && i != this.state.FilterArray.length)
+      isInclude = true;
+    if (isInclude == false) {
+      this.state.FilterArray.push({
+          name: "Tank Size",
+          value: tagValue4+" " + this.state.levelGallonValue,
+      });
+    } else {
+      this.state.FilterArray[i].name = "Tank Size";
+        this.state.FilterArray[i].value = tagValue4 + " " + this.state.levelGallonValue;
+    }
     this.setState({ tagValue4 }, function () {
       this.saveAdvance();
       console.log("tagValue4", tagValue4);
     });
     $("#tgSize").removeClass("ant-tag-hidden");
-  };
+    };
+
+    setSizeValue = (sizeValue) => {
+        this.setState({ levelGallonValue: sizeValue }, function () {
+            this.saveAdvance();
+        });
+
+        let i = 0;
+        let isInclude = false;
+        for (i = 0; i < this.state.FilterArray.length; i++) {
+            if (this.state.FilterArray[i].name == "Tank Size") break;
+        }
+        if (this.state.FilterArray.length > 0 && i != this.state.FilterArray.length)
+            isInclude = true;
+        if (isInclude == false) {
+            this.state.FilterArray.push({
+                name: "Tank Size",
+                value: this.state.tagValue4 + " " + sizeValue,
+            });
+        } else {
+            this.state.FilterArray[i].name = "Tank Size";
+            this.state.FilterArray[i].value = this.state.tagValue4 + " " + sizeValue;
+        }
+
+    }
   closeTag(e) {
     console.log(e);
   }
@@ -400,7 +894,16 @@ class AdvancedSearchForm extends Component {
     this.setState({ tagVisible: !this.state.tagVisible });
     if (this.state.tagValue === "Propane") {
       $("#dvPropane").removeClass("activeSelectedTag");
+      this.state.tagValue = "";
       this.saveAdvance();
+      let i = 0;
+      if ((this.state.FilterArray.length == 1)) this.state.FilterArray = [];
+      else {
+        for (i = 0; i < this.state.FilterArray.length; i++) {
+          if (this.state.FilterArray[i].name == "Commodity Type") break;
+        }
+        this.state.FilterArray.splice(i , 1);
+      }
     }
   };
   handleCloseStatus() {
@@ -417,6 +920,15 @@ class AdvancedSearchForm extends Component {
     $("#tgStatus").addClass("ant-tag-hidden");
     this.state.tagValue1 = "";
     this.saveAdvance();
+    let i = 0;
+    if ((this.state.FilterArray.length == 1)) this.state.FilterArray = [];
+    else {
+      for (i = 0; i < this.state.FilterArray.length; i++) {
+        if (this.state.FilterArray[i].name == "Tank Status") break;
+      }
+      this.state.FilterArray.splice(i , 1);
+    }
+
     //this.callfetchValue();
     // $("#dvTag_Status").remove();
   }
@@ -429,6 +941,14 @@ class AdvancedSearchForm extends Component {
     $("#tgAlerts").addClass("ant-tag-hidden");
     this.state.tagValue2 = "";
     this.saveAdvance();
+    let i = 0;
+    if ((this.state.FilterArray.length == 1)) this.state.FilterArray = [];
+    else {
+      for (i = 0; i < this.state.FilterArray.length; i++) {
+        if (this.state.FilterArray[i].name == "Alerts") break;
+      }
+      this.state.FilterArray.splice(i , 1);
+    }
   }
   handleCloseSensor() {
     if (this.state.tagValue3 === "Online") {
@@ -439,6 +959,14 @@ class AdvancedSearchForm extends Component {
     $("#tgSensor").addClass("ant-tag-hidden");
     this.state.tagValue3 = "";
     this.saveAdvance();
+    let i = 0;
+    if ((this.state.FilterArray.length == 1)) this.state.FilterArray = [];
+    else {
+      for (i = 0; i < this.state.FilterArray.length; i++) {
+        if (this.state.FilterArray[i].name == "Sensor") break;
+      }
+      this.state.FilterArray.splice(i , 1);
+    }
   }
   handleCloseSize() {
     if (this.state.tagValue4 === ">=") {
@@ -451,19 +979,34 @@ class AdvancedSearchForm extends Component {
     $("#tgSize").addClass("ant-tag-hidden");
     this.state.tagValue4 = "";
     this.saveAdvance();
+    let i = 0;
+    if ((this.state.FilterArray.length == 1)) this.state.FilterArray = [];
+    else {
+      for (i = 0; i < this.state.FilterArray.length; i++) {
+        if (this.state.FilterArray[i].name == "Tank Size") break;
+      }
+     this.state.FilterArray.splice(i , 1);
+    }
   }
-  onChange = (e) => {
-    // this.setState({
-    //   checked: e.target.checked,
-    // });
-    console.log(`checked = ${e.target.checked}`);
-  };
+  selectView(column, e) {
+    if (e != undefined) {
+      if (!this.state.viewArray.includes(column))
+        this.state.viewArray.push(column);
+      else {
+        var index = this.state.viewArray.indexOf(column);
+        this.state.viewArray.splice(index, 1);
+      }
+      console.log("array", this.state.viewArray);
+    }
+  }
+  ShowCustomisedview() {
+    this.props.fetchCustomisedView(this.state.viewArray);
+  }
   render() {
     const { visible, hideForm, mode, advanceReset, currentId } = this.props;
     if (
       visible === true &&
-      advanceReset === true &&
-      this.state.tempadvanceReset === false
+      advanceReset === true      
     )
       this.resetSearch();
 
@@ -490,13 +1033,16 @@ class AdvancedSearchForm extends Component {
       tagVisible,
       tagVisible1,
       checked,
+      saveSearchesDate,
+      IsSearchButton,
       sizeValue,
       tempdata,
       savedSearches,
       saveItemArray,
       renderSaves,
       disableSearch,
-      serchtxt,
+        serchtxt,
+        levelGallonValue
     } = this.state;
     return (
       <div className="advanced_form">
@@ -525,7 +1071,7 @@ class AdvancedSearchForm extends Component {
                 );
               }
               if (loading) return "Loading...";
-              if (error) return `Error!`;
+              if (error) return null;
               if (data) {
                 this.state.temp = data.loggedInUser.savedSearches;
               }
@@ -534,7 +1080,7 @@ class AdvancedSearchForm extends Component {
           </Query>
         )}
 
-        {mode === "advanced" ? (
+        {mode === "advanced" && (
           <Drawer
             title="Advanced Search"
             width={620}
@@ -575,7 +1121,7 @@ class AdvancedSearchForm extends Component {
                       onClose={() => this.handleClose()}
                       className="edit-tag"
                     >
-                      {tagValue}
+                      <h5>Commodity : </h5> {tagValue}
                     </Tag>
                   </div>
                 )}
@@ -588,7 +1134,7 @@ class AdvancedSearchForm extends Component {
                       onClose={() => this.handleCloseStatus()}
                       className="edit-tag"
                     >
-                      {tagValue1}
+                      <h5> Tank status : </h5> {tagValue1}
                     </Tag>
                   </div>
                 )}
@@ -600,7 +1146,7 @@ class AdvancedSearchForm extends Component {
                       onClose={() => this.handleCloseAlerts()}
                       className="edit-tag"
                     >
-                      {tagValue2}
+                      <h5> Alerts : </h5> {tagValue2}
                     </Tag>
                   </div>
                 )}
@@ -612,7 +1158,7 @@ class AdvancedSearchForm extends Component {
                       onClose={() => this.handleCloseSensor()}
                       className="edit-tag"
                     >
-                      {tagValue3}
+                      <h5> Sensors : </h5> {tagValue3}
                     </Tag>
                   </div>
                 )}
@@ -624,7 +1170,7 @@ class AdvancedSearchForm extends Component {
                       onClose={() => this.handleCloseSize()}
                       className="edit-tag"
                     >
-                      {tagValue4}
+                                        <h5> Tank Size : </h5> {tagValue4}{levelGallonValue}
                     </Tag>
                   </div>
                 )}
@@ -737,10 +1283,7 @@ class AdvancedSearchForm extends Component {
                       <input
                         className="vertrax__tankInput"
                         type="number"
-                        onChange={(e) =>
-                          this.setState({
-                            levelGallonValue: e.target.valueAsNumber,
-                          })
+                        onChange={(e) => this.setSizeValue(e.target.valueAsNumber)                       
                         }
                         placeholder="Enter value for tank size"
                       />
@@ -770,35 +1313,24 @@ class AdvancedSearchForm extends Component {
             {advancedTab === 1 && (
               <div>
                 <SaveCard
-                  additionalPoints
+                  // additionalPoints
                   heading="Saved Searches"
                   contents={[
                     <div className="saved_searches">
                       {
                         <Query query={userSavedQuery}>
-                          {({ data, error, loading, refetch }) => {
-                            // <>
-                            //const { listItems } = data;
-                            //console.log("refetch", refetch, "networkStatus", networkStatus)
-
-                            //{
-                            //    (loading || networkStatus === 4)
-
-                            //    ? <div className="loading-items"><p>Loading...</p></div>
-                            //        : < listItems={data} refetch={refetch} />
-
-                            //}
-
+                          {({ data, error, loading, refetch }) => {                          
                             if (loading) {
                               return (
                                 <div>
                                   <loading />
                                 </div>
-                              );
-                            }
-                            if (loading) return "Loading...";
-                            if (error) return `Error!`;
-                            if (data) {
+                                          );
+                                      }
+                                      refetch();
+                           
+                            if (error) return `null`;
+                            if (data && data.loggedInUser.savedSearches != null) {
                               this.state.renderSaves = Object.values(
                                 data.loggedInUser.savedSearches
                               );
@@ -807,16 +1339,7 @@ class AdvancedSearchForm extends Component {
                                   this.state.renderSaves[0]
                                 );
                               console.log("alerts ", this.state.renderSaves);
-                              // return data && <strong>{data.loggedInUser.savedSearches.searches1.date}</strong>;
-                              // return
-                              // {filterdata.length > 0 ? (
-                              // <Fragment>
-                              // {filterdata.map((item) =>
-                              // )}
-                              // </Fragment>
-                              // ) : (
-                              // ""
-                              // )}
+                              
                               return (
                                 <div>
                                   {this.state.renderSaves.map(
@@ -824,6 +1347,18 @@ class AdvancedSearchForm extends Component {
                                       <React.Fragment>
                                         {/* <div className="saved_searches--content"> */}
                                         <Button
+                                          style={{
+                                            backgroundColor:
+                                              saveSearchesDate ==
+                                                searches.date && IsSearchButton
+                                                ? "#90c822"
+                                                : "white",
+                                            color:
+                                              saveSearchesDate ==
+                                                searches.date && IsSearchButton
+                                                ? "white"
+                                                : "black",
+                                          }}
                                           size="large"
                                           type="default"
                                           className="savedSearch_btn"
@@ -832,7 +1367,10 @@ class AdvancedSearchForm extends Component {
                                           onClickCapture={() => {
                                             this.searchBySave(
                                               searches.filter,
-                                              searches.id
+                                              searches.id,
+                                              searches.typename,
+                                              searches.description,
+                                              searches.date
                                             );
                                           }}
                                         >
@@ -845,6 +1383,16 @@ class AdvancedSearchForm extends Component {
                                       </React.Fragment>
                                     )
                                   )}
+                                  {this.state.renderSaves.length == 0 && (
+                                    <div className="saveNotFound">
+                                      No searches found
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div>
                                   {this.state.renderSaves.length == 0 && (
                                     <div className="saveNotFound">
                                       No searches found
@@ -896,15 +1444,14 @@ class AdvancedSearchForm extends Component {
             {advancedTab === 0 && (
               <div className="filter__saveBtn">
                 <Button
-                  disabled={disableSearch}
                   className="saved_btn"
                   size="large"
+                  onClick={this.clearValue.bind(this)}
                   // class="ant-btn saved_btn ant-btn-lg"
                 >
                   Reset{" "}
                 </Button>
                 <Button
-                  disabled={disableSearch}
                   className="saved_btn"
                   size="large"
                   // class="ant-btn saved_btn ant-btn-lg"
@@ -924,14 +1471,14 @@ class AdvancedSearchForm extends Component {
                   size="large"
                   className="saved_btn"
                   onClick={this.togglePopup.bind(this)}
-                  disabled={disableSearch}
                 >
                   Save{" "}
                 </Button>
               </div>
             )}
           </Drawer>
-        ) : (
+        )}
+        {mode === "customized" && (
           <Drawer
             title={`Customize View`}
             width={620}
@@ -952,7 +1499,7 @@ class AdvancedSearchForm extends Component {
                   <Row gutter={16}>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox onClick={(e) => this.selectView("Number", e)}>
                           {" "}
                           Tank Number
                         </Checkbox>
@@ -960,7 +1507,7 @@ class AdvancedSearchForm extends Component {
                     </Col>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox onClick={(e) => this.selectView("Volume", e)}>
                           {" "}
                           Current Volume
                         </Checkbox>
@@ -970,7 +1517,9 @@ class AdvancedSearchForm extends Component {
                   <Row gutter={16}>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox
+                          onClick={(e) => this.selectView("TankStatus", e)}
+                        >
                           {" "}
                           Tank Status
                         </Checkbox>
@@ -978,7 +1527,9 @@ class AdvancedSearchForm extends Component {
                     </Col>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox
+                          onClick={(e) => this.selectView("Potential", e)}
+                        >
                           {" "}
                           Refill Potential
                         </Checkbox>
@@ -988,7 +1539,9 @@ class AdvancedSearchForm extends Component {
                   <Row gutter={16}>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox
+                          onClick={(e) => this.selectView("GatwayStatus", e)}
+                        >
                           {" "}
                           Gateway Status
                         </Checkbox>
@@ -996,7 +1549,11 @@ class AdvancedSearchForm extends Component {
                     </Col>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox
+                          onClick={(e) =>
+                            this.selectView("RefillPotentialDiff", e)
+                          }
+                        >
                           {" "}
                           Refill Potential Diff.
                         </Checkbox>
@@ -1006,7 +1563,9 @@ class AdvancedSearchForm extends Component {
                   <Row gutter={16}>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox
+                          onClick={(e) => this.selectView("SensorStatus", e)}
+                        >
                           {" "}
                           Sensor Status
                         </Checkbox>
@@ -1014,7 +1573,9 @@ class AdvancedSearchForm extends Component {
                     </Col>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox
+                          onClick={(e) => this.selectView("Tampreture", e)}
+                        >
                           {" "}
                           Temp at Tank
                         </Checkbox>
@@ -1024,12 +1585,17 @@ class AdvancedSearchForm extends Component {
                   <Row gutter={16}>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}> Alerts</Checkbox>
+                        <Checkbox onClick={(e) => this.selectView("Alerts", e)}>
+                          {" "}
+                          Alerts
+                        </Checkbox>
                       </div>
                     </Col>
                     <Col span={12}>
                       <div className="export__data--content">
-                        <Checkbox onChange={this.onChange}>
+                        <Checkbox
+                          onClick={(e) => this.selectView("BatteryLevel", e)}
+                        >
                           {" "}
                           Battery Level
                         </Checkbox>
@@ -1055,6 +1621,7 @@ class AdvancedSearchForm extends Component {
                 }
                 size="large"
                 className="customize--saved_btn"
+                // onClick={() => this.ShowCustomisedview()}
                 // className="client_export--btn"
                 // onClick={this.SavingAdvanceSearch.bind(this)}
               >

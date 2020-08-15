@@ -16,7 +16,7 @@ const ClientLayout = Loadable({
 function AppRoutes() {
   return (
     <Switch>
-      <Route path="/" exact render={(props) => <MainLayout {...props} />} />
+      <Route path="/tanks" exact component={MainLayout} />
       <Route path="/tank-details/:id" component={ClientLayout} />
     </Switch>
   );

@@ -1,5 +1,5 @@
 import React, { Component, useState } from "react";
-import { Table, Progress, Popover, Checkbox, Button } from "antd";
+import { Table, Progress, Popover, Checkbox, Button, Pagination } from "antd";
 import ResizableAntdTable from "resizable-antd-table";
 import { Link, withRouter } from "react-router-dom";
 import ContentCard from "../ContentCard";
@@ -25,6 +25,7 @@ import { Query } from "react-apollo";
 import { data } from "jquery";
 import lodash from "lodash";
 import { Mutation } from "react-apollo";
+//import Pagination from "react-js-pagination";
 //import gql from 'graphql-tag'
 
 const userId = localStorage.getItem("userId");
@@ -120,52 +121,28 @@ const tankTable = gql`
   }
 `;
 
-const popoverAlert = (
-  <div>
-    <ContentCard
-      styleName="card_alertyellow card_popover"
-      contents={[
-        <div className="alerts">
-          <img src={arrowDownGrey} alt="download" />
-          <p>30% Capacity</p>
-          <img src={yellowSquare} alt="square" />
-        </div>,
-      ]}
-    />
-    <ContentCard
-      styleName="card_alertred card_popover"
-      contents={[
-        <div className="alerts">
-          <img style={{ width: 18 }} src={broadcastGrey} alt="download" />
-          <p>20%</p>
-          <img src={arrowDownGrey} alt="square" />
-          <p>Time</p>
-          <img src={triangleRed} alt="triangle" />
-        </div>,
-      ]}
-    />
-  </div>
-);
-
 class TankTable extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      saveFiler: {},
       formVisible: false,
       exportVisibleDrawer: false,
-      docsCount: 10,
+      docsCount: 50,
       selectedId: userId,
       selectedRowKeys: [],
       selectionEnabled: false,
       selectedTankId: "",
       counter: 0,
-      pageSize: 50,
+      pageSize: 100,
       currentPage: 1,
       checked: false,
       pageData: {},
       filtercondition: {},
       filteredByDate: false,
+      paginationDisableBtn: false,
+      totalShowCount: [],
+      TotalPage: 0,
+      currentPageSize: 50,
       columns: [
         {
           title: "Tank Number",
@@ -183,10 +160,12 @@ class TankTable extends Component {
               return 1;
             }
           },
-          sortDirections: ["ascend", "descend"],
+          sortDirections: ["ascend", "descend", "ascend"],
           render: (text, record) => (
             <Link to={`/tank-details/${record.node.id}`}>
-              <span>{record.node ? record.node.externalId : ""}</span>
+              <span>
+                {record.node.externalId ? record.node.externalId : ""}
+              </span>
             </Link>
           ),
         },
@@ -206,7 +185,7 @@ class TankTable extends Component {
               return 1;
             }
           },
-          sortDirections: ["ascend", "descend"],
+          sortDirections: ["ascend", "descend", "ascend"],
           render: (text, record) => (
             <span>{record.node ? record.node.description : ""}</span>
           ),
@@ -214,7 +193,7 @@ class TankTable extends Component {
         {
           title: "Tank Status",
           defaultSortOrder: "ascend",
-          sortDirections: ["ascend", "descend"],
+          sortDirections: ["ascend", "descend", "ascend"],
           sorter: (a, b) => {
             if (
               (a.node.latestReading
@@ -336,67 +315,204 @@ class TankTable extends Component {
             </Query>
           ),
 
-          sorter: (a, b) => a.tankNum - b.tankNum,
-          sortDirections: ["descend", "ascend"],
           width: "25%",
           render: (record) => {
-            const alarmValues = { high: 0, medium: 0 };
-            record.node.alarms
-              .filter(({ alarming }) => alarming)
-              .forEach(({ priority }) => {
-                priority >= 500 && priority <= 999
-                  ? alarmValues.medium++
-                  : alarmValues.high++;
-              });
+            const alarmObject = { priority: 0, alarmType: "" };
+            const alarmTypeName = [];
+            const alarmValues = { high: 0, medium: 0, noAlert: 0 };
 
-            const highOrMedium = alarmValues.high >= alarmValues.medium;
+            record.node.alarms.forEach(({ priority, alarmType, alarming }) => {
+              if (alarming == true) {
+                if (priority >= 500 && priority <= 999) {
+                  alarmValues.medium++;
+                } else if (priority >= 1000) {
+                  alarmValues.high++;
+                  alarmTypeName.push({ type: alarmType, priority: priority });
+                  if (alarmObject.priority < priority) {
+                    alarmObject.priority = priority;
+                    alarmObject.alarmType = alarmType;
+                  }
+                } else {
+                  alarmValues.noAlert++;
+                }
+              }
+            });
+            for (let i = 0; i < alarmTypeName.length; i++) {
+              for (let j = i; j < alarmTypeName.length; j++) {
+                var temp;
+                if (alarmTypeName[i].priority < alarmTypeName[j].priority) {
+                  temp = alarmTypeName[i];
+                  alarmTypeName[i] = alarmTypeName[j];
+                  alarmTypeName[j] = temp;
+                }
+              }
+            }
+            const highOrMedium =
+              alarmValues.high >= alarmValues.medium > alarmValues.noAlert;
             return (
-              <span>
-                <span>
-                  <ContentCard
-                    styleName={
-                      highOrMedium ? "card_alertred" : "card_alertyellow"
-                    }
-                    contents={[
-                      <div className="alerts">
-                        <p>{highOrMedium ? "High" : "Medium"}</p>
-                        <img
-                          className="alert_redtriangle"
-                          src={highOrMedium ? triangleRed : yellowSquare}
-                          alt="square"
+              <span className="alerts__popover--description">
+                {highOrMedium > 0 ? (
+                  <span>
+                    <ContentCard
+                      styleName={
+                        highOrMedium ? "card_alertred" : "card_alertyellow"
+                      }
+                      contents={[
+                        <div className="alerts">
+                          <p>
+                            {highOrMedium > 0
+                              ? alarmObject.alarmType ===
+                                "sensorMissedReportsAlarm"
+                                ? "Sensor Missed Checkin"
+                                : alarmObject.alarmType === "critLowLevelAlarm"
+                                ? "Critical Low Level"
+                                : alarmObject.alarmType === "dhsAlarm"
+                                ? "DHS"
+                                : "No Alerts"
+                              : "Low Level"}
+                          </p>
+                          {/* <p>{highOrMedium ? "High" : "Medium"}</p> */}
+                          <img
+                            className="alert_redtriangle"
+                            src={highOrMedium ? triangleRed : yellowSquare}
+                            alt="square"
+                          />
+                        </div>,
+                      ]}
+                    />
+
+                    <Popover
+                      placement="bottomLeft"
+                      // content={popoverAlert}
+                      trigger="hover"
+                      content={
+                        <div className="alerts__popover">
+                          {alarmValues.medium > 0 ? (
+                            <div>
+                              <ContentCard
+                                styleName="card_alertyellow card_popover"
+                                contents={[
+                                  <div className="alerts">
+                                    <p>Low Level</p>
+                                    <img
+                                      className="alert_redtriangle"
+                                      src={yellowSquare}
+                                      alt="square"
+                                    />
+                                  </div>,
+                                ]}
+                              />
+                            </div>
+                          ) : (
+                            <div>
+                              <ContentCard
+                                styleName="card_alertyellow card_popover"
+                                contents={[
+                                  <div className="alerts">
+                                    <p>None</p>
+                                    <img
+                                      className="alert_redtriangle"
+                                      src={yellowSquare}
+                                      alt="square"
+                                    />
+                                  </div>,
+                                ]}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      }
+                    >
+                      <div className="badge_hoverEffect">
+                        <Badge
+                          badgeImg={yellowSquare}
+                          countAlert={alarmValues.medium}
                         />
-                      </div>,
-                    ]}
-                  />
-                  <Popover
-                    placement="bottomLeft"
-                    content={popoverAlert}
-                    trigger="hover"
-                  >
-                    <Badge
-                      badgeImg={yellowSquare}
-                      countAlert={alarmValues.medium}
+                      </div>
+                    </Popover>
+                    <Popover
+                      placement="bottomLeft"
+                      trigger="hover"
+                      content={
+                        <div className="alerts__popover">
+                          {alarmTypeName.length == 0 && (
+                            <div>
+                              <ContentCard
+                                styleName="card_alertred card_popover"
+                                contents={[
+                                  <div className="alerts">
+                                    <p>None</p>
+                                    <img
+                                      className="alert_redtriangle"
+                                      src={triangleRed}
+                                      alt="triangle"
+                                    />
+                                  </div>,
+                                ]}
+                              />
+                            </div>
+                          )}
+                          {alarmTypeName.map((item) => (
+                            <ContentCard
+                              styleName="card_alertred card_popover"
+                              contents={[
+                                <div className="alerts">
+                                  <p>
+                                    {item.type === "sensorMissedReportsAlarm"
+                                      ? "Sensor Missed Checkin"
+                                      : ""}
+                                    {item.type === "critLowLevelAlarm"
+                                      ? "Critical Low Level"
+                                      : ""}
+                                    {item.type === "dhsAlarm" ? "DHS" : ""}
+                                  </p>
+
+                                  <img
+                                    className="alert_redtriangle"
+                                    src={triangleRed}
+                                    alt="triangle"
+                                  />
+                                </div>,
+                              ]}
+                            />
+                          ))}
+                        </div>
+                      }
+                    >
+                      <div className="badge_hoverEffect">
+                        <Badge
+                          badgeImg={triangleRed}
+                          countAlert={alarmValues.high}
+                        />
+                      </div>
+                    </Popover>
+                  </span>
+                ) : (
+                  <span>
+                    <ContentCard
+                      styleName="card_online"
+                      contents={[
+                        <div className="alerts">
+                          <p>No Alerts</p>
+                        </div>,
+                      ]}
                     />
-                    <Badge
-                      badgeImg={triangleRed}
-                      countAlert={alarmValues.high}
-                    />
-                  </Popover>
-                </span>
+                  </span>
+                )}
               </span>
             );
           },
         },
         {
           title: "Commodity",
-          sortDirections: ["descend", "ascend"],
+          sortDirections: ["ascend", "descend", "ascend"],
           dataIndex: "propane",
           width: "9%",
           render: (text, record) => <span>Propane</span>,
         },
         {
           title: "Current Volume",
-          sortDirections: ["ascend", "descend"],
+          sortDirections: ["ascend", "descend", "ascend"],
           sorter: (a, b) => {
             if (
               (a.node.latestReading
@@ -435,9 +551,9 @@ class TankTable extends Component {
                         (record.node.specifications
                           ? record.node.specifications.capacityGallons / 100
                           : 0)
-                    ) +
+                    ).toLocaleString() +
                     " " +
-                    record.node.specifications.capacityUnits
+                    "G"
                   : 0
                 : "0"}{" "}
             </span>
@@ -445,7 +561,7 @@ class TankTable extends Component {
         },
         {
           title: "Refill Potential",
-          sortDirections: ["ascend", "descend"],
+          sortDirections: ["ascend", "descend", "ascend"],
           sorter: (a, b) => {
             if (
               (a.node.latestReading
@@ -472,9 +588,9 @@ class TankTable extends Component {
                 ? record.node.latestReading.refillPotentialGallons != null
                   ? Math.round(
                       record.node.latestReading.refillPotentialGallons
-                    ) +
+                    ).toLocaleString() +
                     " " +
-                    record.node.specifications.capacityUnits
+                    "G"
                   : "0"
                 : "0"}{" "}
             </span>
@@ -482,7 +598,7 @@ class TankTable extends Component {
         },
         {
           title: "Tank Capacity",
-          sortDirections: ["ascend", "descend"],
+          sortDirections: ["ascend", "descend", "ascend"],
           sorter: (a, b) => {
             if (
               (a.node.specifications
@@ -502,9 +618,11 @@ class TankTable extends Component {
           render: (text, record) => (
             <span>
               {record.node.specifications
-                ? Math.round(record.node.specifications.capacityGallons) +
+                ? Math.round(
+                    record.node.specifications.capacityGallons
+                  ).toLocaleString() +
                   " " +
-                  record.node.specifications.capacityUnits
+                  "G"
                 : ""}{" "}
             </span>
           ),
@@ -557,10 +675,12 @@ class TankTable extends Component {
         },
       ],
     };
-
+    //this.state.columns.push(this.state.TankNumber);
     this.hideForm = this.hideForm.bind(this);
     this.showCustomizedForm = this.showCustomizedForm.bind(this);
     this.exportDrawer = this.exportDrawer.bind(this);
+    this.onShowSizeChange = this.onShowSizeChange.bind(this);
+    //this.customisedView = this.customisedView.bind(this);;
 
     const that = this;
     this.dragProps = {
@@ -659,9 +779,22 @@ class TankTable extends Component {
       }
     }
     if (this.props.adSearchValue != "")
-      filtercondition.push({
-        description: { op: "match", v: this.props.adSearchValue },
-      });
+      filtercondition.push(
+        {
+          _or: [
+            {
+              description: {
+                op: "match",
+                v: this.props.adSearchValue,
+              },
+            },
+            { description: { op: "=", v: this.props.adSearchValue } },
+          ],
+        }
+        //{
+        //description: { op: "match", v: this.props.adSearchValue },
+        //}
+      );
 
     if (this.props.adLevelValue != "") {
       if (this.props.adLevelValue === "0.80" && this.props.adLevelOP === "<=") {
@@ -704,10 +837,14 @@ class TankTable extends Component {
         });
       } else {
         filtercondition.push({
-          levelPercent: {
-            op: this.props.adLevelOP,
-            v: this.props.adLevelValue,
-          },
+          _or: [
+            {
+              levelPercent: {
+                op: this.props.adLevelOP,
+                v: this.props.adLevelValue,
+              },
+            },
+          ],
         });
       }
     }
@@ -736,12 +873,25 @@ class TankTable extends Component {
         },
       });
 
-    if (this.props.saveFiler.length || this.props.saveFiler._or)
-      filtercondition = this.props.saveFiler;
+    if (this.props.saveFiler != undefined)
+      if (this.props.saveFiler.length || this.props.saveFiler._or)
+        filtercondition = this.props.saveFiler;
 
     this.setState({ filtercondition });
   };
 
+  onShowSizeChange(current, type) {
+    console.log("pageSize", current);
+  }
+  customisedView(customosedArray) {
+    this.setState({
+      formVisible: false,
+      //mode: "customized",
+      //clicked: false,
+      //   entry
+    });
+    // console.log("tankTable", this.state.columns);
+  }
   showForm() {
     this.setState({
       formVisible: true,
@@ -834,6 +984,7 @@ class TankTable extends Component {
       pageData,
       filteredByDate,
       filtercondition,
+      paginationDisableBtn,
     } = this.state;
 
     const rowSelection = {
@@ -842,7 +993,6 @@ class TankTable extends Component {
       hideDefaultSelections: true,
       type: "checkbox",
     };
-    console.log("anjaliaaaa", data.locationEntry);
     const columns = this.state.columns.map((col, index) => ({
       ...col,
       onHeaderCell: (column) => ({
@@ -874,6 +1024,7 @@ class TankTable extends Component {
             if (error) {
               return <div>Error</div>;
             } else if (data) {
+              console.log("tank table data", data.locationEntry);
               if (
                 filteredByDate ||
                 !Object.keys(pageData).length ||
@@ -884,7 +1035,21 @@ class TankTable extends Component {
                   pageData: { ...data.locationEntry.tanks },
                   selectedTankId: this.props.selectedTankId,
                   filteredByDate: false,
+                  endCursor: data.locationEntry.tanks.pageInfo.endCursor,
+                  //  totalShowCount: (data.locationEntry.tanks.edges),
                 });
+              if (data.locationEntry.tanks.totalCount % 50 == 0) {
+                this.state.TotalPage =
+                  data.locationEntry.tanks.totalCount /
+                  this.state.currentPageSize;
+              } else {
+                this.state.TotalPage =
+                  ~~(
+                    data.locationEntry.tanks.totalCount /
+                    this.state.currentPageSize
+                  ) + 1;
+              }
+
               return (
                 data &&
                 data.locationEntry && (
@@ -906,20 +1071,40 @@ class TankTable extends Component {
                         rowKey={(record) => record.node.id}
                         rowSelection={selectionEnabled ? rowSelection : null}
                         scroll={{ x: 1300 }}
-                        pagination={true}
-                      />
-                      <div style={{ textAlign: "center" }}>
-                        {data.locationEntry.tanks.totalCount >
-                          data.locationEntry.tanks.edges.length && (
-                          <Button
-                            type="primary"
-                            size="medium"
-                            className="tank__loadmore"
-                            onClick={() => {
-                              const {
-                                endCursor,
-                              } = data.locationEntry.tanks.pageInfo;
-                              console.log(endCursor);
+                        //pagination={{ showSizeChanger: false }}
+                        pagination={{ defaultPageSize: 50 }}
+                        onChange={(e) => {
+                          const {
+                            endCursor,
+                          } = data.locationEntry.tanks.pageInfo;
+                          // this.state.currentPage = e.current;
+                          // this.state.TotalPage = data.locationEntry.tanks.totalCount / e.pageSize
+
+                          if (
+                            data.locationEntry.tanks.totalCount % e.pageSize ==
+                            0
+                          ) {
+                            this.setState({
+                              currentPage: e.current,
+                              TotalPage:
+                                data.locationEntry.tanks.totalCount /
+                                e.pageSize,
+                              currentPageSize: e.pageSize,
+                            });
+                          } else {
+                            this.setState({
+                              currentPage: e.current,
+                              TotalPage:
+                                data.locationEntry.tanks.totalCount /
+                                  e.pageSize +
+                                1,
+                              currentPageSize: e.pageSize,
+                            });
+                          }
+
+                          {
+                            Object.keys(pageData.edges).length / e.pageSize ==
+                              e.current &&
                               fetchMore({
                                 variables: { after: endCursor },
                                 updateQuery: (
@@ -944,19 +1129,22 @@ class TankTable extends Component {
                                           .edges,
                                       ],
                                     },
+                                    paginationDisableBtn: false,
                                   });
-                                  // if (!fetchMoreResult)
-                                  //   return [...prevResult, ...fetchMoreResult];
-                                  // return fetchMoreResult;
+
                                   return fetchMoreResult;
                                 },
                               });
-                            }}
-                          >
-                            Load more..
-                          </Button>
-                        )}
-                      </div>
+                          }
+                        }}
+
+                        //  pagination={true}
+                      />
+                      <h4 className="pagination__pageCount">
+                        {" "}
+                        Page [{this.state.currentPage} / {this.state.TotalPage}]
+                        of {data.locationEntry.tanks.totalCount} Records{" "}
+                      </h4>
                     </ReactDragListView.DragColumn>
 
                     <div className="tab_alerts tank_alerts">
@@ -987,6 +1175,7 @@ class TankTable extends Component {
           hideForm={this.hideForm}
           mode={mode}
           entry={entry}
+          fetchCustomisedView={this.customisedView}
         />
         <ExportDrawer
           visible={exportVisibleDrawer}

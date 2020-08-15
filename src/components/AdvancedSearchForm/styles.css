@@ -91,7 +91,7 @@ Button.ant-btn-lg.savedSearch_btn {
 .savedSearch_btn.ant-btn:not([disabled]):hover,
 .savedSearch_btn.ant-btn:not([disabled]):focus {
   background-color: var(--color-orange);
-  color: var(--color-white);
+  /*color: var(--color-white);*/
 }
 .saveNotFound {
   width: 100%;
@@ -108,7 +108,7 @@ Button.ant-btn-lg.savedSearch_btn {
 .saved_searches--content:hover,
 .saved_searches--content:focus {
   background-color: var(--color-orange);
-  color: var(--color-white);
+  /*color: var(--color-white);*/
 }
 
 /* advanced filters */
@@ -191,6 +191,12 @@ Button.ant-btn-lg.savedSearch_btn {
   border-radius: 4px;
   color: var(--color-eclipse);
   font-size: 14px;
+}
+.vertrax-tag h5 {
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
 }
 .popup {
   position: fixed;

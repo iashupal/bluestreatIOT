@@ -2,7 +2,7 @@
   width: 145px;
   height: 145px;
   position: relative;
-  cursor: pointer;
+  /* cursor: pointer; */
 }
 .CircularProgressbar .CircularProgressbar-trail {
   stroke: var(--color-lightgrey);
@@ -30,10 +30,15 @@
 }
 .graphStroke.gatewayStroke.CircularProgressbar .CircularProgressbar-path {
   stroke: var(--color-red);
-  /* stroke-dashoffset: 1% !important; */
 }
 .graphStroke.gatewayStroke.CircularProgressbar .CircularProgressbar-trail {
+  /* stroke: var(--color-parrot); */
+}
+.graphStroke.sensorStroke.CircularProgressbar .CircularProgressbar-trail {
   stroke: var(--color-parrot);
+}
+.graphStroke.sensorStroke.CircularProgressbar .CircularProgressbar-path {
+  stroke: var(--color-red);
 }
 .progressbar_inr--info {
   position: absolute;
@@ -102,7 +107,7 @@ p.inventory_status {
   width: 180px;
   height: 180px;
   margin: 0 auto;
-  cursor: pointer;
+  /* cursor: pointer; */
 }
 
 .graphStyle .graph_content {

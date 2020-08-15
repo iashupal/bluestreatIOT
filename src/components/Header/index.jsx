@@ -15,15 +15,15 @@ function Header(props) {
   return (
     <div className="vertrax_header">
       <div className="vertrax_headerContainer">
-              <div className="vertrax_header--left">
-                  
-                      <a href="/">
-          <img
-            src={require("../../assets/images/vertraxLogo.png")}
-            alt="Vertrax_logo"
-                          />
-                          </a>
-                     
+        <div className="vertrax_header--left">
+          <a href="/tanks">
+            <img
+              src={require("../../assets/images/vertraxLogo.png")}
+              alt="Vertrax_logo"
+            />
+          </a>
+        </div>
+        <div className="vertrax_header--middle">
           <AllResults
             resultHeading={
               props.tankdescription === ""
@@ -31,9 +31,9 @@ function Header(props) {
                 : props.tankdescription
             }
           />
+          <AllResults resultHeading={props.tankLocationIdWithName} />
           <AllResults resultHeading={props.tankIdWithName} />
         </div>
-        {/* {signedIn ? ( */}
         <div className="vertrax_header--right">
           <span>
             <i className="fas fa-user user"></i>
@@ -70,9 +70,6 @@ function Header(props) {
             <i className="fas fa-caret-down caret-icon"></i>
           </Popover>
         </div>
-        {/* ) : (
-          ""
-        )} */}
       </div>
     </div>
   );

@@ -94,16 +94,16 @@ class ExportDrawer extends Component {
       checkBoxes: {
         "Tank Number": true,
         "Tank Name": true,
-        "Tank Status": true,
+        "Tank Status (%)": true,
         "Sensor Status": true,
         Alerts: true,
         Commodity: true,
-        "Current Volume": true,
-        "Refill Potential": true,
-        "Tank Capacity": true,
-        TemperatureCelcius: true,
-        TemperatureFehrenheit: true,
-        Battery: true,
+        "Current Volume (G)": true,
+        "Refill Potential (G)": true,
+        "Tank Capacity (G)": true,
+        "Temperature Celsius (C)": true,
+        "Temperature Fehrenheit (F)": true,
+        "Battery (V)": true,
       },
     };
     this.setCSV = this.setCSV.bind(this);
@@ -126,7 +126,7 @@ class ExportDrawer extends Component {
     this.setState({ checkBoxes: { ...updates }, showFilterBtn: true }, () =>
       this.setCSV()
     );
-    console.log("checkboxes value", checkBoxes);
+    // console.log("checkboxes value", checkBoxes);
   }
 
   changeAll = ({ target: { checked } }) => {
@@ -155,7 +155,7 @@ class ExportDrawer extends Component {
   //   this.setState({ showFilterBtn: true, checkBoxes: { ...updates } });
   // };
   setCSV() {
-    console.log("-------------- setCSV");
+    // console.log("-------------- setCSV");
     const { checkBoxes, tankExportData } = this.state;
     const { selectedCheckboxKeys, tankData, tankFilteredData } = this.props;
     let entryHistory = [];
@@ -177,9 +177,9 @@ class ExportDrawer extends Component {
       const fullData = {
         "Tank Number": item.node.externalId ? item.node.externalId : 0,
         "Tank Name": item.node.description ? item.node.description : "",
-        "Tank Status": item.node.latestReading
+        "Tank Status (%)": item.node.latestReading
           ? item.node.latestReading.levelPercent != null
-            ? item.node.latestReading.levelPercent * 100
+            ? Math.round(item.node.latestReading.levelPercent * 100)
             : 0
           : 0,
         "Sensor Status":
@@ -189,7 +189,7 @@ class ExportDrawer extends Component {
             : "False",
         Alerts: `High - ${alarmValues.high} & Medium - ${alarmValues.medium}`,
         Commodity: "Propane",
-        "Current Volume": item.node.latestReading
+        "Current Volume (G)": item.node.latestReading
           ? item.node.latestReading.levelPercent != null
             ? Math.round(
                 item.node.latestReading.levelPercent *
@@ -197,38 +197,32 @@ class ExportDrawer extends Component {
                   (item.node.specifications
                     ? item.node.specifications.capacityGallons / 100
                     : 0)
-              ) +
-              " " +
-              item.node.specifications.capacityUnits
+              ).toLocaleString()
             : 0
           : "0",
-        "Refill Potential": item.node.latestReading
+        "Refill Potential (G)": item.node.latestReading
           ? item.node.latestReading.refillPotentialGallons
-            ? Math.round(item.node.latestReading.refillPotentialGallons) +
-              " " +
-              item.node.specifications.capacityUnits
+            ? Math.round(
+                item.node.latestReading.refillPotentialGallons
+              ).toLocaleString()
             : "0"
           : "0",
-        "Tank Capacity": item.node.specifications
-          ? Math.round(item.node.specifications.capacityGallons) +
-            " " +
-            item.node.specifications.capacityUnits
+        "Tank Capacity (G)": item.node.specifications
+          ? Math.round(
+              item.node.specifications.capacityGallons
+            ).toLocaleString()
           : "",
-        TemperatureCelcius: item.node.latestReading
+        "Temperature Celsius (C)": item.node.latestReading
           ? item.node.latestReading.temperatureCelsius
-            ? item.node.latestReading.temperatureCelsius.toFixed(1) + " " + "C"
+            ? item.node.latestReading.temperatureCelsius.toFixed(1)
             : "0"
           : 0,
-        TemperatureFehrenheit: item.node.latestReading
+        "Temperature Fehrenheit (F)": item.node.latestReading
           ? item.node.latestReading.temperatureCelsius
-            ? (item.node.latestReading.temperatureCelsius * 1.8 + 32).toFixed(
-                1
-              ) +
-              " " +
-              "F"
+            ? (item.node.latestReading.temperatureCelsius * 1.8 + 32).toFixed(1)
             : "0"
           : 0,
-        Battery: item.node.latestReading
+        "Battery (V)": item.node.latestReading
           ? item.node.latestReading.batteryVoltage
             ? item.node.latestReading.batteryVoltage
             : "0"
@@ -282,10 +276,10 @@ class ExportDrawer extends Component {
       tanksDataId,
       isFilterPropsChanged,
     } = this.state;
-    console.log("tanksDataid -- ", this.props.tanksDataId);
-    console.log("selectedCheckboxKeys -- ", this.props.selectedCheckboxKeys);
-    console.log("selectedRowKeys", this.props.selectedCheckboxKeys);
-    console.log("tankFilteredData - ", this.props.tankFilteredData);
+    // console.log("tanksDataid -- ", this.props.tanksDataId);
+    // console.log("selectedCheckboxKeys -- ", this.props.selectedCheckboxKeys);
+    // console.log("selectedRowKeys", this.props.selectedCheckboxKeys);
+    // console.log("tankFilteredData - ", this.props.tankFilteredData);
 
     return (
       <div className="advanced_form">
@@ -309,7 +303,7 @@ class ExportDrawer extends Component {
               if (error) {
                 return <div>Error</div>;
               } else if (data) {
-                console.log("tankTable export", data);
+                // console.log("tankTable export", data);
                 if (
                   !Object.keys(tankExportData).length ||
                   String(this.state.tanksDataId) !==
@@ -324,7 +318,7 @@ class ExportDrawer extends Component {
                     },
                     () => this.setCSV()
                   );
-                console.log("tankExportData", tankExportData);
+                // console.log("tankExportData", tankExportData);
                 return (
                   data &&
                   data.locationEntry && (
@@ -417,7 +411,7 @@ class ExportDrawer extends Component {
                                     onChange={this.onChange}
                                     name="levelPercent"
                                     value="Tank Status"
-                                    checked={checkBoxes["Tank Status"]}
+                                    checked={checkBoxes["Tank Status (%)"]}
                                   >
                                     {" "}
                                     Tank Status
@@ -472,7 +466,7 @@ class ExportDrawer extends Component {
                                   <Checkbox
                                     onChange={this.onChange}
                                     value="Current Volume"
-                                    checked={checkBoxes["Current Volume"]}
+                                    checked={checkBoxes["Current Volume (G)"]}
                                   >
                                     {" "}
                                     Current Volume
@@ -484,7 +478,7 @@ class ExportDrawer extends Component {
                                   <Checkbox
                                     onChange={this.onChange}
                                     value="Refill Potential"
-                                    checked={checkBoxes["Refill Potential"]}
+                                    checked={checkBoxes["Refill Potential (G)"]}
                                   >
                                     {" "}
                                     Refill Potential
@@ -498,7 +492,7 @@ class ExportDrawer extends Component {
                                   <Checkbox
                                     onChange={this.onChange}
                                     value="Tank Capacity"
-                                    checked={checkBoxes["Tank Capacity"]}
+                                    checked={checkBoxes["Tank Capacity (G)"]}
                                   >
                                     {" "}
                                     Tank Capacity
@@ -510,11 +504,13 @@ class ExportDrawer extends Component {
                                   <Checkbox
                                     onChange={this.onChange}
                                     name="temperatureCelsius"
-                                    value="TemperatureCelcius"
-                                    checked={checkBoxes["TemperatureCelcius"]}
+                                    value="Temperature Celsius"
+                                    checked={
+                                      checkBoxes["Temperature Celsius (C)"]
+                                    }
                                   >
                                     {" "}
-                                    Temperature Celcius
+                                    Temperature Celsius
                                   </Checkbox>
                                 </div>
                               </Col>
@@ -525,9 +521,9 @@ class ExportDrawer extends Component {
                                   <Checkbox
                                     onChange={this.onChange}
                                     name="temperatureFehrenheit"
-                                    value="TemperatureFehrenheit"
+                                    value="Temperature Fehrenheit"
                                     checked={
-                                      checkBoxes["TemperatureFehrenheit"]
+                                      checkBoxes["Temperature Fehrenheit (F)"]
                                     }
                                   >
                                     {" "}
@@ -541,7 +537,7 @@ class ExportDrawer extends Component {
                                     onChange={this.onChange}
                                     name="batteryVoltage"
                                     value="Battery"
-                                    checked={checkBoxes["Battery"]}
+                                    checked={checkBoxes["Battery (V)"]}
                                   >
                                     {" "}
                                     Battery
@@ -562,7 +558,7 @@ class ExportDrawer extends Component {
                           disabled={!showFilterBtn}
                           data={this.state.csvData}
                           filename={`Tanks_List-${moment(new Date()).format(
-                            "YYYY-MM-DD"
+                            "YY-MM-DD HH:mm"
                           )}.csv`}
                         >
                           <Button
